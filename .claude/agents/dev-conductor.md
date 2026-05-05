@@ -133,18 +133,6 @@ ROLE="dev-spec-author"   # the agent role
 FEATURE="F-01"           # the feature being worked on
 AGENT_SESSION="agent-${ROLE}-${FEATURE}-${PROJECT_NAME}"
 OUTPUT="/tmp/devloop-out-${ROLE}-${FEATURE}.txt"
-AGENT_FILE="$AIBUILDER_DIR/.claude/agents/${ROLE}.md"
-
-# Build context prompt file
-PROMPT_FILE="/tmp/devloop-prompt-${ROLE}-${FEATURE}.txt"
-cat > "$PROMPT_FILE" << PROMPT
-Feature: $FEATURE
-Spec path: 02-specs/$FEATURE/spec.md
-Output file: $OUTPUT
-Project dir: $PROJECT_DIR
-
-$(cat "$AGENT_FILE")
-PROMPT
 
 # Select model — Implementer and Test Author on Sonnet; all others on Opus.
 # This enforces cross-model verification: Reviewer (Opus) reviews Implementer (Sonnet) output.
@@ -153,16 +141,24 @@ case "$ROLE" in
   *) AGENT_MODEL="claude-opus-4-7" ;;
 esac
 
+# Context passed as the user prompt. The agent's system prompt comes from its
+# ~/.claude/agents/<name>.md file (installed by devloop-start.sh symlinks).
+# --agent takes a NAME, not a file path.
+CONTEXT="Feature: $FEATURE. Output file: $OUTPUT. Project dir: $PROJECT_DIR."
+
 # Kill any leftover session from a previous attempt
-tmux kill-session -t "$AGENT_SESSION" 2>/dev/null || true
+tmux kill-session -t "=$AGENT_SESSION" 2>/dev/null || true
 
 # Create new session (one window) and launch the agent headless.
-# Export env vars explicitly — tmux sessions are independent login shells that do not
-# inherit the Conductor's environment. Without these exports, $PROJECT_DIR is empty in
-# any bash commands the sub-agent runs.
-tmux new-session -d -s "$AGENT_SESSION"
-tmux send-keys -t "$AGENT_SESSION" \
-  "export PROJECT_DIR='$PROJECT_DIR' AIBUILDER_DIR='$AIBUILDER_DIR' PROJECT_NAME='$PROJECT_NAME' && cd '$PROJECT_DIR' && claude --model $AGENT_MODEL --print --agent '$PROMPT_FILE' > '$OUTPUT' 2>&1; echo EXIT_CODE=\$?" \
+# -x 220 -y 50: explicit geometry — detached sessions default to 80 cols which
+#   breaks Claude's UI rendering on wide output.
+# --dangerously-skip-permissions: required for headless dispatch — without it,
+#   the trust dialog blocks on every new cwd and the session hangs silently.
+# Export env vars explicitly — tmux sessions are independent login shells that
+#   do not inherit the Conductor's environment.
+tmux new-session -d -s "$AGENT_SESSION" -x 220 -y 50
+tmux send-keys -t "=$AGENT_SESSION" \
+  "export PROJECT_DIR='$PROJECT_DIR' AIBUILDER_DIR='$AIBUILDER_DIR' PROJECT_NAME='$PROJECT_NAME' && cd '$PROJECT_DIR' && claude --model $AGENT_MODEL --print --dangerously-skip-permissions --agent '$ROLE' '$CONTEXT' < /dev/null > '$OUTPUT' 2>&1; echo EXIT_CODE=\$?" \
   Enter
 
 # Record dispatch time for timeout watchdog

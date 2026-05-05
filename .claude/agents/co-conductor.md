@@ -124,24 +124,27 @@ TELEGRAM_TARGET=$(grep TELEGRAM_TARGET "$PROJECT_DIR/.devloop/config" 2>/dev/nul
 
 ### Level 3: Conductor dead — restart
 ```bash
-CONDUCTOR_AGENT="$AIBUILDER_DIR/.claude/agents/dev-conductor.md"
-
 # Kill the dead session
-tmux kill-session -t "conductor-${PROJECT_NAME}" 2>/dev/null || true
+tmux kill-session -t "=conductor-${PROJECT_NAME}" 2>/dev/null || true
 
-# Create a fresh session (one window)
-tmux new-session -d -s "conductor-${PROJECT_NAME}"
-tmux send-keys -t "conductor-${PROJECT_NAME}" \
+# Create a fresh session (one window) with explicit geometry.
+# --dangerously-skip-permissions: required to skip trust dialog in headless context.
+# --agent dev-conductor: uses the name resolved from ~/.claude/agents/ (symlinked by devloop-start.sh).
+#   Do NOT pass a file path — --agent takes a name, not a path.
+tmux new-session -d -s "conductor-${PROJECT_NAME}" -x 220 -y 50
+tmux send-keys -t "=conductor-${PROJECT_NAME}" \
   "export PROJECT_DIR='$PROJECT_DIR' AIBUILDER_DIR='$AIBUILDER_DIR' PROJECT_NAME='$PROJECT_NAME'" Enter
 sleep 1
-tmux send-keys -t "conductor-${PROJECT_NAME}" \
-  "cd '$PROJECT_DIR' && claude --model claude-sonnet-4-6 --agent '$CONDUCTOR_AGENT'" Enter
-sleep 3
+tmux send-keys -t "=conductor-${PROJECT_NAME}" \
+  "cd '$PROJECT_DIR' && claude --model claude-sonnet-4-6 --dangerously-skip-permissions --agent dev-conductor" Enter
+sleep 8
+tmux send-keys -t "=conductor-${PROJECT_NAME}" "" Enter   # absorb first-Enter quirk
+sleep 1
 
 # Send restart context — pass the file path, NOT the file contents.
 # Embedding STATUS.md inline in tmux send-keys means each newline fires as Enter,
 # sending partial shell commands and corrupting the new session's state entirely.
-tmux send-keys -t "conductor-${PROJECT_NAME}" \
+tmux send-keys -t "=conductor-${PROJECT_NAME}" \
   "RESTART by Co-Conductor at $(date -u +%Y-%m-%dT%H:%M:%SZ). Resume from current state — do NOT redo completed stages. Re-read STATUS.md at $PROJECT_DIR/05-progress/STATUS.md to orient." \
   Enter
 

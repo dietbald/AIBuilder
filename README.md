@@ -81,32 +81,44 @@ Inception produces everything the development loop needs: `FEATURES.md`, `domain
 
 Run the inception agents **sequentially**, one at a time. Each agent reads the previous agent's output.
 
+**First — install agent symlinks** so `--agent <name>` resolves correctly:
+
 ```bash
 AIBUILDER_DIR="/path/to/AIBuilder"
-PROJECT_DIR="/path/to/your/project"
+mkdir -p ~/.claude/agents
+for f in "$AIBUILDER_DIR/.claude/agents/"*.md; do
+  ln -sf "$f" ~/.claude/agents/$(basename "$f")
+done
+```
 
+Then run inception:
+
+```bash
+PROJECT_DIR="/path/to/your/project"
 cd "$PROJECT_DIR"
 
 # I-1: Business Analyst — defines features and acceptance criteria
-claude --agent "$AIBUILDER_DIR/.claude/agents/inception-ba.md"
+claude --dangerously-skip-permissions --agent inception-ba
 
 # I-2: Tech Stack — decides languages, frameworks, packages
-claude --agent "$AIBUILDER_DIR/.claude/agents/inception-techstack.md"
+claude --dangerously-skip-permissions --agent inception-techstack
 
 # I-3: Brand — tone, naming conventions, UI style
-claude --agent "$AIBUILDER_DIR/.claude/agents/inception-brand.md"
+claude --dangerously-skip-permissions --agent inception-brand
 
 # I-4: Domain — models the core domain concepts
-claude --agent "$AIBUILDER_DIR/.claude/agents/inception-domain.md"
+claude --dangerously-skip-permissions --agent inception-domain
 
 # I-5: Infra — sets up cloud infrastructure and CI/CD
-claude --agent "$AIBUILDER_DIR/.claude/agents/inception-infra.md"
+claude --dangerously-skip-permissions --agent inception-infra
 
 # I-6: Scaffold — generates the project skeleton from the above
-claude --agent "$AIBUILDER_DIR/.claude/agents/inception-scaffold.md"
+claude --dangerously-skip-permissions --agent inception-scaffold
 ```
 
-> **Your role during inception:** The BA agent (I-1) will ask you questions via `AskUserQuestion`. Answer them. The rest are largely autonomous but may surface questions. When inception is complete, the project directory has everything the development loop needs.
+> **`--agent` takes a name, not a file path.** Claude Code resolves names from `~/.claude/agents/` (user-level) and `<cwd>/.claude/agents/` (project-level). The symlink step above puts all AIBuilder agents in the user-level location.
+
+> **Your role during inception:** The BA agent (I-1) will ask you questions interactively. Answer them. The rest are largely autonomous but may surface questions. When inception is complete, the project directory has everything the development loop needs.
 
 After inception completes, verify these files exist before starting the dev loop:
 
@@ -270,15 +282,24 @@ If this file doesn't exist or `TELEGRAM_TARGET` is not set, alerts are skipped a
 Run the stress tests in `STRESS_TESTS.md` in order. **ST-01 (the PONG test) is a hard gate** — if it fails, the entire trigger mechanism needs to be replaced before anything else runs.
 
 ```bash
-# ST-01 — verify claude interactive mode works under tmux injection
-tmux new-session -d -s test-claude
-tmux send-keys -t test-claude "claude" Enter
-sleep 5
-tmux send-keys -t test-claude "say the word PONG and nothing else" Enter
-sleep 15
-tmux capture-pane -t test-claude -p
-tmux kill-session -t test-claude
-# Output must contain the word PONG cleanly
+# ST-01 — verify claude interactive mode + tmux injection
+tmux new-session -d -s test-pong -x 220 -y 50
+tmux send-keys -t =test-pong "claude --dangerously-skip-permissions" Enter
+sleep 8
+tmux send-keys -t =test-pong "" Enter   # absorb first-Enter quirk
+sleep 1
+tmux send-keys -t =test-pong "say the word PONG and nothing else" Enter
+for i in $(seq 1 30); do
+  tmux capture-pane -t =test-pong -p | grep -q '● PONG' && echo "PASS at poll $i" && break
+  sleep 2
+done
+tmux kill-session -t =test-pong
+# Must print "PASS at poll N" — if it times out, the conductor trigger mechanism is broken.
+
+# ST-02 — verify --print --agent headless dispatch (the sub-agent pattern)
+claude --print --dangerously-skip-permissions --agent general-purpose \
+  "say the word PONG and nothing else" < /dev/null
+# Must output: PONG
 ```
 
 See `STRESS_TESTS.md` for the full list.

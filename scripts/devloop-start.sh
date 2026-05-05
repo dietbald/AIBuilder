@@ -113,35 +113,52 @@ if [ ! -f "$EVENT_LOG" ]; then
 fi
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) | system | devloop | started | project=$PROJECT_NAME" >> "$EVENT_LOG"
 
+# ── Install agent symlinks ────────────────────────────────────────────
+# claude --agent <name> resolves from ~/.claude/agents/ (user-level) and
+# <cwd>/.claude/agents/ (project-level). Symlinking here means agents are
+# always discoverable regardless of which cwd the sub-agent sessions use.
+CLAUDE_AGENTS_DIR="$HOME/.claude/agents"
+mkdir -p "$CLAUDE_AGENTS_DIR"
+echo "Installing agent symlinks..."
+for agent_file in "$AIBUILDER_DIR/.claude/agents/"*.md; do
+  agent_name=$(basename "$agent_file" .md)
+  ln -sf "$agent_file" "$CLAUDE_AGENTS_DIR/$agent_name.md"
+done
+echo "  Symlinked $(ls "$AIBUILDER_DIR/.claude/agents/"*.md | wc -l | tr -d ' ') agents → $CLAUDE_AGENTS_DIR"
+
 # ── Kill any existing sessions for this project ───────────────────────
-tmux kill-session -t "$CONDUCTOR_SESSION"   2>/dev/null || true
-tmux kill-session -t "$COCONDUCTOR_SESSION" 2>/dev/null || true
+tmux kill-session -t "=$CONDUCTOR_SESSION"   2>/dev/null || true
+tmux kill-session -t "=$COCONDUCTOR_SESSION" 2>/dev/null || true
 
 # ── Launch Conductor (own session, one window) ────────────────────────
 echo "Launching Conductor..."
-tmux new-session -d -s "$CONDUCTOR_SESSION"
-tmux send-keys -t "$CONDUCTOR_SESSION" \
+tmux new-session -d -s "$CONDUCTOR_SESSION" -x 220 -y 50
+tmux send-keys -t "=$CONDUCTOR_SESSION" \
   "export PROJECT_DIR='$PROJECT_DIR' AIBUILDER_DIR='$AIBUILDER_DIR' PROJECT_NAME='$PROJECT_NAME'" Enter
 sleep 1
-tmux send-keys -t "$CONDUCTOR_SESSION" \
-  "cd '$PROJECT_DIR' && claude --model claude-sonnet-4-6 --agent '$CONDUCTOR_AGENT'" Enter
-sleep 3
+tmux send-keys -t "=$CONDUCTOR_SESSION" \
+  "cd '$PROJECT_DIR' && claude --model claude-sonnet-4-6 --dangerously-skip-permissions --agent dev-conductor" Enter
+sleep 8
+tmux send-keys -t "=$CONDUCTOR_SESSION" "" Enter   # absorb first-Enter quirk (boot sometimes eats it)
+sleep 1
 
 # Send initial orientation — starts the first read of STATUS.md
-tmux send-keys -t "$CONDUCTOR_SESSION" \
+tmux send-keys -t "=$CONDUCTOR_SESSION" \
   "DevLoop starting for $PROJECT_NAME. Read AGENTS.md and 05-progress/STATUS.md to orient yourself, then wait for 'tick' messages from the cron scheduler." Enter
 
 # ── Launch Co-Conductor (own session, one window) ─────────────────────
 echo "Launching Co-Conductor..."
-tmux new-session -d -s "$COCONDUCTOR_SESSION"
-tmux send-keys -t "$COCONDUCTOR_SESSION" \
+tmux new-session -d -s "$COCONDUCTOR_SESSION" -x 220 -y 50
+tmux send-keys -t "=$COCONDUCTOR_SESSION" \
   "export PROJECT_DIR='$PROJECT_DIR' AIBUILDER_DIR='$AIBUILDER_DIR' PROJECT_NAME='$PROJECT_NAME'" Enter
 sleep 1
-tmux send-keys -t "$COCONDUCTOR_SESSION" \
-  "cd '$PROJECT_DIR' && claude --model claude-sonnet-4-6 --agent '$COCONDUCTOR_AGENT'" Enter
-sleep 3
+tmux send-keys -t "=$COCONDUCTOR_SESSION" \
+  "cd '$PROJECT_DIR' && claude --model claude-sonnet-4-6 --dangerously-skip-permissions --agent co-conductor" Enter
+sleep 8
+tmux send-keys -t "=$COCONDUCTOR_SESSION" "" Enter   # absorb first-Enter quirk
+sleep 1
 
-tmux send-keys -t "$COCONDUCTOR_SESSION" \
+tmux send-keys -t "=$COCONDUCTOR_SESSION" \
   "Co-Conductor starting for $PROJECT_NAME. You will receive 'audit' messages every 15 minutes. On each audit, check if the Conductor is alive and making progress." Enter
 
 # ── Install cron jobs ─────────────────────────────────────────────────
@@ -149,8 +166,8 @@ echo "Installing cron jobs..."
 
 CRON_TAG="# devloop-${PROJECT_NAME}"
 
-CRON_TICK="*/3 * * * * tmux send-keys -t '${CONDUCTOR_SESSION}' 'tick' Enter ${CRON_TAG}-tick"
-CRON_AUDIT="*/15 * * * * cp '${PROJECT_DIR}/05-progress/STATUS.md' '${PROJECT_DIR}/.devloop/status-snapshot.md' 2>/dev/null; tmux send-keys -t '${COCONDUCTOR_SESSION}' 'audit' Enter ${CRON_TAG}-audit"
+CRON_TICK="*/3 * * * * tmux send-keys -t '=${CONDUCTOR_SESSION}' 'tick' Enter ${CRON_TAG}-tick"
+CRON_AUDIT="*/15 * * * * cp '${PROJECT_DIR}/05-progress/STATUS.md' '${PROJECT_DIR}/.devloop/status-snapshot.md' 2>/dev/null; tmux send-keys -t '=${COCONDUCTOR_SESSION}' 'audit' Enter ${CRON_TAG}-audit"
 
 # Remove any existing devloop cron entries for this project
 ( crontab -l 2>/dev/null | grep -v "# devloop-${PROJECT_NAME}-" ) | crontab - 2>/dev/null || true
