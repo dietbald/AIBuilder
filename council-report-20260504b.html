@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIBuilder Council Report — Redesigned Architecture — 2026-05-04</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; color: #1a1a1a; line-height: 1.6; }
+  .container { max-width: 860px; margin: 0 auto; padding: 32px 24px; }
+
+  .header { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+  .header .subtitle { font-size: 13px; color: #64748b; margin-bottom: 12px; }
+  .header .question { font-size: 14px; color: #475569; background: #f1f5f9; border-left: 3px solid #6366f1; padding: 12px 16px; border-radius: 0 4px 4px 0; }
+  .header .meta { font-size: 12px; color: #94a3b8; margin-top: 10px; }
+
+  /* One thing — most prominent */
+  .one-thing { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 24px 28px; margin-bottom: 24px; }
+  .one-thing .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 10px; }
+  .one-thing h3 { font-size: 15px; font-weight: 600; color: #f1f5f9; margin-bottom: 10px; }
+  .one-thing pre { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 14px 16px; font-size: 13px; color: #cbd5e1; font-family: 'Cascadia Code', 'Fira Code', monospace; overflow-x: auto; margin-top: 12px; white-space: pre-wrap; }
+
+  /* Verdict */
+  .verdict { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 24px; overflow: hidden; }
+  .verdict-header { background: #0f172a; color: #fff; padding: 14px 24px; }
+  .verdict-header h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .verdict-body { padding: 24px; }
+  .verdict-section { margin-bottom: 28px; padding-bottom: 28px; border-bottom: 1px solid #f1f5f9; }
+  .verdict-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .verdict-section h3 { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 12px; }
+  .verdict-section p { font-size: 14px; color: #374151; margin-bottom: 10px; }
+  .verdict-section p:last-child { margin-bottom: 0; }
+  .verdict-section strong { color: #0f172a; }
+  .verdict-section ol, .verdict-section ul { padding-left: 20px; margin: 10px 0; }
+  .verdict-section li { font-size: 14px; color: #374151; margin-bottom: 8px; }
+
+  /* Fix list */
+  .fix-list { counter-reset: fix-counter; list-style: none; padding-left: 0; }
+  .fix-list li { counter-increment: fix-counter; display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
+  .fix-list li::before { content: counter(fix-counter); display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; border-radius: 50%; background: #0f172a; color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .fix-list li span { font-size: 14px; color: #374151; }
+  .fix-list li span strong { color: #0f172a; }
+
+  /* Issue table */
+  .grid-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 24px; overflow: hidden; }
+  .grid-card-header { padding: 12px 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+  .grid-card-body { padding: 16px 20px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 600; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+  td { padding: 9px 10px; border-bottom: 1px solid #f8fafc; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+  .badge-fatal { background: #fee2e2; color: #991b1b; }
+  .badge-new { background: #fef3c7; color: #92400e; }
+  .badge-blind { background: #ede9fe; color: #5b21b6; }
+  .badge-ok { background: #d1fae5; color: #065f46; }
+
+  /* Advisor positions */
+  .positions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .pos-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; }
+  .pos-card .adv { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .pos-card .txt { font-size: 13px; color: #374151; }
+  .pos-card.critical { border-left: 3px solid #dc2626; }
+  .pos-card.structural { border-left: 3px solid #7c3aed; }
+  .pos-card.upside { border-left: 3px solid #16a34a; }
+  .pos-card.action { border-left: 3px solid #2563eb; }
+  .adv-contrarian { color: #dc2626; }
+  .adv-firstprinciples { color: #7c3aed; }
+  .adv-expansionist { color: #16a34a; }
+  .adv-outsider { color: #d97706; }
+  .adv-executor { color: #2563eb; }
+
+  /* Collapsible */
+  details { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+  details summary { padding: 14px 20px; font-size: 14px; font-weight: 600; cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; color: #0f172a; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after { content: '+'; font-size: 18px; color: #94a3b8; font-weight: 400; }
+  details[open] summary::after { content: '−'; }
+  details summary:hover { background: #f8fafc; }
+  .details-body { padding: 4px 20px 20px; border-top: 1px solid #f1f5f9; font-size: 14px; color: #374151; }
+  .details-body p { margin: 12px 0; }
+  .details-body pre { background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 6px; font-size: 13px; overflow-x: auto; margin: 12px 0; font-family: 'Cascadia Code', 'Fira Code', monospace; white-space: pre-wrap; }
+  .details-body ul, .details-body ol { padding-left: 20px; margin: 10px 0; }
+  .details-body li { margin-bottom: 6px; }
+  .details-body strong { color: #0f172a; }
+
+  .advisor-tag { display: inline-block; padding: 2px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; margin-right: 6px; }
+  .tag-contrarian { background: #fee2e2; color: #991b1b; }
+  .tag-firstprinciples { background: #ede9fe; color: #5b21b6; }
+  .tag-expansionist { background: #d1fae5; color: #065f46; }
+  .tag-outsider { background: #fef3c7; color: #92400e; }
+  .tag-executor { background: #dbeafe; color: #1e40af; }
+
+  .section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin: 24px 0 10px; }
+
+  .alert-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 14px 16px; margin: 12px 0; font-size: 13px; color: #7f1d1d; }
+  .alert-box strong { color: #991b1b; }
+
+  .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>AIBuilder Council Report — Redesigned Architecture</h1>
+    <div class="subtitle">Second council session — evaluating the cron + persistent interactive session design</div>
+    <div class="question">
+      <strong>Question:</strong> The previous design's fatal bugs are fixed. The new design uses persistent interactive <code>claude</code> sessions triggered by cron via <code>tmux send-keys</code>. Each sub-agent gets its own tmux session. Is this architecture sound, and what breaks on first run?
+    </div>
+    <div class="meta">5 advisors · 5 peer reviewers · 1 chairman synthesis · 2026-05-04</div>
+  </div>
+
+  <!-- THE ONE THING -->
+  <div class="one-thing">
+    <div class="label">The One Thing to Do First</div>
+    <h3>Verify the foundational assumption before writing another line of code</h3>
+    <p style="font-size:14px; color:#cbd5e1; margin-bottom:4px;">Run this test. If the output contains "PONG" cleanly, the tmux send-keys trigger is viable. If not, the mechanism must be replaced before anything else.</p>
+    <pre>tmux new-session -d -s test-claude
+tmux send-keys -t test-claude "claude" Enter
+sleep 5
+tmux send-keys -t test-claude "say the word PONG and nothing else" Enter
+sleep 15
+tmux capture-pane -t test-claude -p</pre>
+  </div>
+
+  <!-- Verdict -->
+  <div class="verdict">
+    <div class="verdict-header"><h2>Council Verdict</h2></div>
+    <div class="verdict-body">
+
+      <div class="verdict-section">
+        <h3>Where the Council Agrees</h3>
+        <p><strong>4 of 5 advisors</strong> (Contrarian, First Principles, Outsider, Executor — not the Expansionist) independently flagged two structural issues:</p>
+        <p><strong>1. <code>tmux send-keys</code> is not a message bus.</strong> It sends keystrokes to a terminal pane with no acknowledgment, no error, and always exits 0. The cron job cannot distinguish "delivered and processed" from "injected into live output," "sent to dead session," or "queued behind two prior unprocessed ticks." Silent failure is the default, not the exception. <em>(The Expansionist called this "an opportunity" — the council dismissed that framing.)</em></p>
+        <p><strong>2. Persistent conversation history is a liability with an expiration date.</strong> After enough ticks, context degrades. The conductor weights hallucinated history over STATUS.md ground truth. This doesn't announce itself — it looks like drift, then flakiness, then confident wrong decisions. No clean recovery without destroying the context. <em>(The Expansionist called this "emergent intelligence" — the council disagreed: it is a shrinking context window, not accumulating intelligence.)</em></p>
+        <p><strong>2 of 5 advisors</strong> (Outsider, Executor) explicitly flagged a first-run operational break:</p>
+        <p><strong>3. Cron PATH will break on first run.</strong> Fix: add <code>PATH=/usr/bin:/bin</code> at the top of the crontab before anything else runs.</p>
+      </div>
+
+      <div class="verdict-section">
+        <h3>Where the Council Clashes</h3>
+        <p><strong>Is persistent conversation history an upgrade or a liability?</strong> The Expansionist argued it enables "emergent intelligence" — the conductor builds a mental model, gets smarter over time. The remaining four advisors disagreed. LLM conversation history is not cumulative learning; it is a growing context window with a fixed ceiling. The conductor does not get smarter; it gets less reliable. The Expansionist's own proposed solution (session rotation) destroys the accumulated context it claimed was the advantage.</p>
+        <p><strong>How severe is tick-doubling?</strong> The Executor called it an "acceptable risk." Peer reviewers pushed back: on a 3-minute cron interval, a slow LLM response will eventually cause tick stacking — conductor processes tick N+1 without completing tick N's dispatches. On a long-running project this is a guaranteed event, not an edge case.</p>
+      </div>
+
+      <div class="verdict-section">
+        <h3>Blind Spots the Council Caught</h3>
+        <div class="alert-box"><strong>Highest-confidence finding (caught by all 5 reviewers independently):</strong> Does <code>claude</code> interactive mode behave predictably when stdin is a tmux pane rather than a real terminal? PTY vs pipe semantics, input buffering, output flushing, signal handling — none of this is specified in the Claude CLI. The entire architecture rests on an undocumented assumption. If <code>claude</code> buffers input differently under pseudo-TTY conditions, everything collapses before any other failure mode matters.<br><br><strong>⭐ STRESS TEST #1 — This is the first test to execute on the platform.</strong> The PONG test (see "The One Thing to Do First" above) must pass before any further development. Result determines whether <code>tmux send-keys</code> remains the trigger mechanism or must be replaced with a file-based queue.</div>
+        <p><strong>API errors kill the process, not the session.</strong> A rate limit, 5xx, or mid-tick timeout leaves the tmux session alive but the Claude process exited or hung. Cron fires into it. No watchdog, no restart policy, no way to distinguish "thinking" from "dead."</p>
+        <p><strong>No recovery procedure for mid-task conductor death.</strong> Sub-agent completes and writes output. Conductor is gone. STATUS.md goes stale. The next tick fires into a fresh session with no context of orphaned agents. No re-entry checkpoint reconciles in-flight sessions with STATUS.md state.</p>
+        <p><strong>Tick stacking has no debounce.</strong> If two cron firings queue before the first is consumed, conductor processes tick 2 without completing tick 1's dispatches. No deduplication mechanism exists.</p>
+      </div>
+
+      <div class="verdict-section">
+        <h3>The Recommendation</h3>
+        <p>The architecture is a meaningful improvement. The fatal bugs from the first council are fixed: the loop exists, session names are correct, no more single window per session, double-dispatch is addressed. The structural skeleton is sound.</p>
+        <p>It is not production-ready. Fix in this order:</p>
+        <ol class="fix-list">
+          <li><span><strong>Run the PONG test.</strong> Verify <code>claude</code> interactive works correctly under tmux pseudo-TTY injection. If it fails, replace the trigger mechanism with a file-based queue or named pipe before proceeding.</span></li>
+          <li><span><strong>Add cron PATH.</strong> <code>PATH=/usr/bin:/bin</code> in crontab. Do this before first run.</span></li>
+          <li><span><strong>Fix tmux exact-match.</strong> Use <code>tmux has-session -t "=session-name"</code> (note the <code>=</code> prefix, tmux 3.x+) for the double-dispatch check. Without it, partial name matches cause false negatives.</span></li>
+          <li><span><strong>Replace session-existence check with status files.</strong> <code>tmux has-session</code> tells you a session exists, not that the agent is alive or finished. Write <code>.devloop/agent-status/${ROLE}-${FEATURE}.status</code> with states: <code>running</code>, <code>complete</code>, <code>failed</code>. Dispatch checks the file, not the session.</span></li>
+          <li><span><strong>Add tick deduplication.</strong> Write a lockfile at tick start, remove at tick end. If cron fires and lockfile exists, skip. Prevents tick stacking without IPC changes.</span></li>
+          <li><span><strong>Add conductor watchdog to co-conductor.</strong> Verify the conductor session is responsive, not just present. A dead session that the co-conductor "audits" produces logs, not recovery.</span></li>
+          <li><span><strong>Add a restart reconciliation procedure.</strong> When the conductor session restarts (by co-conductor or manually), it must scan <code>.devloop/agent-status/</code> for orphaned <code>running</code> agents, check their output files, and advance STATUS.md before starting the next tick.</span></li>
+        </ol>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Issue map -->
+  <div class="grid-card">
+    <div class="grid-card-header">Issue Map</div>
+    <div class="grid-card-body">
+      <table>
+        <thead>
+          <tr>
+            <th>Issue</th>
+            <th>Type</th>
+            <th>Who flagged it</th>
+            <th>Fix</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cron PATH — tmux not in cron's PATH</td>
+            <td><span class="badge badge-fatal">First-run fatal</span></td>
+            <td>3 advisors</td>
+            <td><code>PATH=/usr/bin:/bin</code> in crontab</td>
+          </tr>
+          <tr>
+            <td>tmux has-session partial name match</td>
+            <td><span class="badge badge-fatal">First-run fatal</span></td>
+            <td>Executor</td>
+            <td><code>-t "=exact-name"</code> syntax</td>
+          </tr>
+          <tr>
+            <td>tmux send-keys: no ACK, always exits 0</td>
+            <td><span class="badge badge-new">Structural</span></td>
+            <td>All 5 advisors</td>
+            <td>Lockfile + status files (IPC)</td>
+          </tr>
+          <tr>
+            <td>Context window drift / hallucinated history</td>
+            <td><span class="badge badge-new">Structural</span></td>
+            <td>All 5 advisors</td>
+            <td>Tick counter → restart at N=50</td>
+          </tr>
+          <tr>
+            <td>Tick stacking — no debounce on slow responses</td>
+            <td><span class="badge badge-new">Structural</span></td>
+            <td>Peer review only</td>
+            <td>Tick lockfile</td>
+          </tr>
+          <tr>
+            <td>claude CLI PTY behavior unverified</td>
+            <td><span class="badge badge-blind">Foundational unknown</span></td>
+            <td>All 5 reviewers</td>
+            <td>Run PONG test first</td>
+          </tr>
+          <tr>
+            <td>API error kills process, session survives — no watchdog</td>
+            <td><span class="badge badge-blind">Blind spot</span></td>
+            <td>3 reviewers</td>
+            <td>Co-conductor watchdog</td>
+          </tr>
+          <tr>
+            <td>Mid-task conductor death — orphaned agents, no reconciliation</td>
+            <td><span class="badge badge-blind">Blind spot</span></td>
+            <td>2 reviewers</td>
+            <td>Status files + restart reconciler</td>
+          </tr>
+          <tr>
+            <td>STATUS.md snapshot race (cron writes while conductor ticks)</td>
+            <td><span class="badge badge-new">Race condition</span></td>
+            <td>Outsider</td>
+            <td>Atomic cp via temp file</td>
+          </tr>
+          <tr>
+            <td>Dedicated session per sub-agent, one window each</td>
+            <td><span class="badge badge-ok">Fixed ✓</span></td>
+            <td>—</td>
+            <td>Already correct</td>
+          </tr>
+          <tr>
+            <td>Loop mechanism (was no-loop in v1)</td>
+            <td><span class="badge badge-ok">Fixed ✓</span></td>
+            <td>—</td>
+            <td>Cron heartbeat</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Advisor positions -->
+  <div class="grid-card">
+    <div class="grid-card-header">Advisor Positions</div>
+    <div class="grid-card-body">
+      <div class="positions-grid">
+        <div class="pos-card critical">
+          <div class="adv adv-contrarian">Contrarian</div>
+          <div class="txt">Persistent session = worst of both worlds. Fragility of stateful with none of the durability. No watchdog means the system appears to run while doing nothing.</div>
+        </div>
+        <div class="pos-card structural">
+          <div class="adv adv-firstprinciples">First Principles</div>
+          <div class="txt">Wrong control flow. A cron job shouldn't reach into a terminal. Conductor should pull from a queue it owns — file, socket, named pipe. Terminal is a human interface, not a message bus.</div>
+        </div>
+        <div class="pos-card upside">
+          <div class="adv adv-expansionist">Expansionist</div>
+          <div class="txt">Persistent session builds emergent intelligence over time. tmux send-keys enables real-time overrides. Parallelism is latent. Context limit is solvable. (Council: this framing is wrong.)</div>
+        </div>
+        <div class="pos-card critical">
+          <div class="adv adv-outsider">Outsider</div>
+          <div class="txt">Silent failures everywhere. Cron exits 0 regardless. Two competing sources of truth (history vs STATUS.md). The one-shot approach failed loudly — this one fails silently.</div>
+        </div>
+        <div class="pos-card action">
+          <div class="adv adv-executor">Executor</div>
+          <div class="txt">Mostly sound. Three concrete breaks: tmux exact-match syntax, context drift after 50 ticks, cron PATH. Fix these and run it.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collapsible advisor responses -->
+  <div class="section-label">Full Advisor Responses</div>
+
+  <details>
+    <summary><span class="advisor-tag tag-outsider">Outsider</span> The one-shot approach failed loudly. This one fails silently.</summary>
+    <div class="details-body">
+      <p><code>tmux send-keys "tick" Enter</code> is not a reliable IPC mechanism. It sends keystrokes to whatever is currently focused in that pane. If Claude is mid-response when cron fires, you've injected "tick" into the middle of output. If the session crashed and restarted, you're sending to a fresh context with no memory. If the pane is at a prompt but Claude hung waiting on a subprocess, "tick" queues silently and fires at the wrong moment. You have no acknowledgment, no error, no log entry. The cron job always exits 0.</p>
+      <p>Conversation history is a liability disguised as a feature. The conductor "remembering what it dispatched" sounds good until the context window fills up, the model hallucinates a state that contradicts STATUS.md, or a corrupted turn poisons everything downstream. Two sources of truth — when they conflict, the model decides, inconsistently.</p>
+      <p>The double-dispatch check is correct but incomplete. <code>tmux has-session</code> tells you the session exists, not that the agent is still running. A finished agent whose session wasn't cleaned up blocks redispatch forever.</p>
+      <p><strong>First-run break:</strong> cron PATH won't have tmux. Add <code>PATH=/usr/bin:/bin</code> explicitly in crontab.</p>
+      <p>The co-conductor's STATUS.md snapshot before audit — who writes it? If the conductor is mid-tick when audit fires, you get a partial snapshot. Race condition, no lock.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-tag tag-expansionist">Expansionist</span> Persistent session is an underrated upgrade — stateful reasoning accumulation.</summary>
+    <div class="details-body">
+      <p>A conductor with persistent conversation history doesn't just remember what it dispatched — it builds a mental model of the project over time. It can notice "three failed QA runs on authentication in the last six ticks" without that insight being written anywhere in STATUS.md. This is emergent intelligence one-shot designs permanently forfeit.</p>
+      <p>The <code>tmux send-keys</code> trigger is an opportunity. Because the conductor is persistent, you could send it anything: a Slack message, GitHub webhook payload, a user override command. The cron job is just the heartbeat. The conductor is now always listening.</p>
+      <p>Dedicated session per sub-agent scales toward parallelism — nothing prevents dispatching a spec-author and a reviewer simultaneously on different features. Parallel feature development is already latent in this design.</p>
+      <p>The context window length limit is the one real constraint — solvable with periodic session rotation, and a good problem to have.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-tag tag-contrarian">Contrarian</span> Worst of both worlds — fragility of stateful, none of the durability.</summary>
+    <div class="details-body">
+      <p>Conversation history across ticks sounds like memory, but it's actually drift. After 50+ ticks, the conductor reasons against a polluted context that contradicts the current STATUS.md. You can't flush it without killing the session — and killing destroys the memory. The architecture inherits the worst of both worlds.</p>
+      <p><code>tmux send-keys</code> fires and forgets. There is no acknowledgment. If Claude is processing a previous tick, the new "tick" gets injected into live output. You now have two concurrent tick-processing threads inside one conversation. The double-dispatch prevention on sub-agents doesn't help — the conductor itself is the race condition.</p>
+      <p>The session-existence check is too coarse. A crashed session may linger. A completed <code>--print</code> run may or may not clean up its tmux session. You need explicit status files, not session polls.</p>
+      <p>No heartbeat, no watchdog. If the conductor dies silently — OOM, API timeout, network drop — the cron job keeps firing into a dead session. The co-conductor auditing a broken conductor will just document the silence.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-tag tag-firstprinciples">First Principles</span> Wrong control flow — terminal is a human interface, not a message bus.</summary>
+    <div class="details-body">
+      <p>The real problem is maintaining durable, resumable state across an AI agent that has no native persistence. Every design decision here is a workaround for that fundamental gap.</p>
+      <p><code>tmux send-keys</code> delivers keystrokes to a terminal, not stdin to a process. If the Claude session is mid-output when cron fires, the "tick" string gets injected into the output stream. This is not a race condition you can tune away — it's structural.</p>
+      <p>The deeper wrong question: why is a cron job reaching into a terminal to poke an AI? The conductor should pull triggers from a queue it owns — a file, a socket, a named pipe — not receive injected keystrokes from outside.</p>
+      <p>Persistent interactive sessions accumulate context. STATUS.md as "authoritative source" partially mitigates this, but the conductor will increasingly weight hallucinated history over the file as context grows.</p>
+      <p><strong>Real question:</strong> should the conductor be interactive at all? Consider externalizing all state to files and using <code>claude --resume</code> or fresh invocations per tick instead.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-tag tag-executor">Executor</span> Mostly sound — three concrete first-run breaks.</summary>
+    <div class="details-body">
+      <p><strong>Break #1: Session target ambiguity.</strong> <code>tmux has-session -t agent-spec-author-auth-BidPlatform</code> matches any session whose name starts with that string. Use the <code>=</code> prefix: <code>tmux has-session -t "=agent-spec-author-auth-BidPlatform"</code> (tmux 3.x+). Without this, double-dispatch prevention is unreliable.</p>
+      <p><strong>Break #2: Interactive session context drift.</strong> After 20-30 ticks the conductor's conversation fills with STATUS.md dumps and dispatch history. Token pressure degrades reasoning quality and eventually hits context limits. Fix: add a tick counter to STATUS.md; at tick 50, restart the conductor session clean.</p>
+      <p><strong>Break #3: Cron PATH.</strong> Add <code>PATH=/usr/bin:/bin</code> in crontab.</p>
+      <p>If cron fires while conductor is mid-response, <code>tmux send-keys</code> queues the tick in the terminal buffer. Claude sees it after finishing. Usually fine — can cause tick-doubling under slow dispatch. Acceptable risk for now.</p>
+      <p>Everything else — dedicated sessions per sub-agent, STATUS.md as truth source, has-session gating — is structurally correct.</p>
+    </div>
+  </details>
+
+  <!-- Peer reviews -->
+  <details>
+    <summary>Peer Review Highlights (5 reviewers)</summary>
+    <div class="details-body">
+      <p><strong>Strongest (unanimous 5/5):</strong> Outsider (Response A) — identified the most consequential failure modes with precision. Every point is falsifiable. The "fails silently" framing is the key insight.</p>
+      <p><strong>Biggest blind spot (unanimous 5/5):</strong> Expansionist (Response B) — rebrands every structural flaw as an opportunity. "Emergent intelligence" is a false claim — LLM conversation history is a growing context window that degrades, not cumulative learning. "Session rotation is solvable" destroys its own thesis by flushing the accumulated context.</p>
+      <p><strong>What all five advisors missed (caught by peer review):</strong></p>
+      <ul>
+        <li><strong>Claude CLI PTY behavior under tmux injection is undocumented</strong> (all 5 reviewers): does interactive <code>claude</code> buffer input, flush output, handle signals differently under pseudo-TTY conditions? This is the foundational unknown the entire architecture rests on.</li>
+        <li><strong>API errors kill the process, not the session</strong> (3 reviewers): rate limit or 5xx leaves the tmux session alive but Claude exited. Cron fires into it. No distinction between "thinking" and "dead."</li>
+        <li><strong>Tick stacking and no debounce</strong> (2 reviewers): two queued ticks before first is consumed → conductor processes tick 2 without resolving tick 1. Guaranteed on any slow response on a 3-minute interval.</li>
+        <li><strong>No re-entry checkpoint after conductor restart</strong> (2 reviewers): sub-agent completes mid-crash, output written, nobody reads it. STATUS.md stale. No reconciliation procedure.</li>
+      </ul>
+    </div>
+  </details>
+
+  <div class="footer">
+    LLM Council · AIBuilder redesigned architecture review · 2026-05-04<br>
+    Council #2 — previous council: <a href="council-report-20260504.html" style="color:#6366f1;">council-report-20260504.html</a><br>
+    Methodology: Karpathy multi-advisor council · 5 advisors → 5 peer reviewers → chairman synthesis
+  </div>
+
+</div>
+</body>
+</html>

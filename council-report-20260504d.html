@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Council Report — AIBuilder Audit #4</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fa; color: #1a1a1a; line-height: 1.6; }
+  .header { background: #1a1a2e; color: white; padding: 32px 40px; }
+  .header h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .header .meta { font-size: 13px; color: #8892a0; }
+  .header .question { margin-top: 16px; font-size: 14px; color: #c0c8d4; background: rgba(255,255,255,0.08); padding: 12px 16px; border-radius: 6px; border-left: 3px solid #4a9eff; }
+  .container { max-width: 860px; margin: 0 auto; padding: 32px 24px; }
+
+  /* Verdict */
+  .verdict-card { background: white; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 24px; overflow: hidden; }
+  .verdict-card .card-header { padding: 16px 24px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #e2e8f0; }
+  .verdict-card .card-body { padding: 20px 24px; }
+
+  .agrees .card-header { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+  .clashes .card-header { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+  .blindspots .card-header { background: #fef3c7; color: #78350f; border-color: #fcd34d; }
+  .recommendation .card-header { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+  .one-thing .card-header { background: #4a9eff; color: white; border-color: #4a9eff; }
+
+  .card-body p { margin-bottom: 12px; font-size: 14px; }
+  .card-body p:last-child { margin-bottom: 0; }
+  .card-body strong { color: #1a1a1a; }
+  .card-body ul { margin: 8px 0 12px 20px; }
+  .card-body li { font-size: 14px; margin-bottom: 6px; }
+
+  /* Agreement matrix */
+  .matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .matrix-item { background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; }
+  .matrix-item .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px; }
+  .matrix-item .value { font-size: 13px; }
+
+  /* Advisor alignment grid */
+  .alignment { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 16px 0 24px; }
+  .advisor-box { border-radius: 8px; padding: 10px 8px; text-align: center; }
+  .advisor-box .name { font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+  .advisor-box .stance { font-size: 10px; }
+  .strongest { background: #dcfce7; border: 1px solid #86efac; }
+  .useful { background: #e0f2fe; border: 1px solid #7dd3fc; }
+  .blind { background: #fef9c3; border: 1px solid #fde047; }
+  .visionary { background: #f3e8ff; border: 1px solid #d8b4fe; }
+  .actionable { background: #fff7ed; border: 1px solid #fed7aa; }
+
+  /* Collapsible advisor sections */
+  details { background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; }
+  details summary { padding: 14px 18px; cursor: pointer; font-size: 14px; font-weight: 500; list-style: none; display: flex; align-items: center; gap: 10px; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: '▶'; font-size: 10px; color: #94a3b8; transition: transform 0.2s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  .advisor-label { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+  .label-contrarian { background: #fee2e2; color: #991b1b; }
+  .label-firstprinciples { background: #e0e7ff; color: #3730a3; }
+  .label-expansionist { background: #f3e8ff; color: #6b21a8; }
+  .label-outsider { background: #fef3c7; color: #92400e; }
+  .label-executor { background: #dcfce7; color: #166534; }
+  .advisor-content { padding: 0 18px 18px; font-size: 13px; line-height: 1.7; border-top: 1px solid #f1f5f9; margin-top: 4px; }
+  .advisor-content p { margin-bottom: 10px; }
+
+  /* Peer review section */
+  .peer-review { background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; }
+  .peer-review summary { padding: 14px 18px; cursor: pointer; font-size: 14px; font-weight: 500; list-style: none; display: flex; align-items: center; gap: 10px; }
+  .pr-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 0 18px 18px; }
+  .pr-cell { background: #f8f9fa; border-radius: 6px; padding: 10px 12px; }
+  .pr-cell .pr-label { font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+  .pr-cell .pr-value { font-size: 12px; }
+
+  /* Issue severity badges */
+  .issue-list { list-style: none; margin: 0; }
+  .issue-list li { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; align-items: flex-start; }
+  .issue-list li:last-child { border-bottom: none; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+  .badge-critical { background: #fee2e2; color: #991b1b; }
+  .badge-high { background: #ffedd5; color: #9a3412; }
+  .badge-arch { background: #e0e7ff; color: #3730a3; }
+  .badge-new { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+
+  .footer { text-align: center; padding: 24px; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; margin-top: 12px; }
+  code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>LLM Council Report — AIBuilder System Audit #4</h1>
+  <div class="meta">2026-05-04 &nbsp;·&nbsp; 5 advisors &nbsp;·&nbsp; 5 peer reviews &nbsp;·&nbsp; Chairman synthesis</div>
+  <div class="question">
+    <strong>Question:</strong> AIBuilder is a multi-agent autonomous software development system. Seven known issues remain unfixed. Does the system design have deeper problems? Are there issues the team is missing?
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Advisor alignment visual -->
+  <div style="margin-bottom: 28px;">
+    <div style="font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Advisor Positions</div>
+    <div class="alignment">
+      <div class="advisor-box strongest">
+        <div class="name">The Contrarian</div>
+        <div class="stance">7 ranked failure modes — all confirmed by peer review</div>
+      </div>
+      <div class="advisor-box useful">
+        <div class="name">First Principles</div>
+        <div class="stance">Pipeline framing is wrong; confident wrongness at scale</div>
+      </div>
+      <div class="advisor-box blind">
+        <div class="name">The Expansionist</div>
+        <div class="stance">Factory vision, portfolio mgmt — all reviewers called blind spot</div>
+      </div>
+      <div class="advisor-box visionary">
+        <div class="name">The Outsider</div>
+        <div class="stance">Every failure is silent; user has no diagnostic signal</div>
+      </div>
+      <div class="advisor-box actionable">
+        <div class="name">The Executor</div>
+        <div class="stance">5 concrete ordered fixes; Reviewer 1 voted strongest</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAIRMAN VERDICT -->
+  <div class="verdict-card agrees">
+    <div class="card-header">✅ Where the Council Agrees</div>
+    <div class="card-body">
+      <p><strong>The system fails silently.</strong> Every advisor independently arrived at this conclusion from a different angle. The Contrarian catalogued seven specific silent failures. The Outsider named it the core finding. The Executor wrote fixes for it. The First Principles Thinker called it "confident wrongness at scale." No advisor found a counter-example. When AIBuilder breaks, nothing tells you — not the user, not the logs, not the STATUS.md, not the agents. Silence is indistinguishable from success.</p>
+      <p><strong>The Contrarian's seven bugs are confirmed.</strong> All five peer reviewers ranked the Contrarian's response as strongest. The bugs were not challenged on accuracy — only criticized for insufficient scope. They should be treated as confirmed failure modes, not allegations.</p>
+      <p><strong>The Codex documentation is actively harmful.</strong> Stale Codex references don't just mislead developers — they break the Reviewer's stated preconditions, making its behavior undefined in the actual operating environment (Claude Sonnet, not Codex).</p>
+    </div>
+  </div>
+
+  <div class="verdict-card clashes">
+    <div class="card-header">⚡ Where the Council Clashes</div>
+    <div class="card-body">
+      <p><strong>Is this a pipeline problem or a search problem?</strong><br>
+      The First Principles Thinker argues the linear pipeline framing is the root cause — software development is recursive and uncertain; forcing it into sequential stages produces the wrong architecture. The Executor implicitly rejects this: the implementation has fixable bugs, not a conceptual flaw. These are irreconcilable without defining what "success" means. For known-domain features with clear specs, the pipeline works. For novel or ambiguous requirements, the pipeline will produce confident wrong output.</p>
+      <p><strong>Is the Expansionist's vision useful?</strong><br>
+      All five reviewers called Response C the biggest blind spot — vision masquerading as technical analysis. The factory/portfolio framing is not wrong, but is irrelevant when the system deadlocks on an empty STATUS.md before running a single feature. Fix the car before planning the road trip.</p>
+    </div>
+  </div>
+
+  <div class="verdict-card blindspots">
+    <div class="card-header">🔍 Blind Spots the Council Caught (Peer Review Round)</div>
+    <div class="card-body">
+      <p>These issues only emerged through the peer review phase — no advisor identified them initially:</p>
+      <ul>
+        <li><strong>No inter-agent output validation.</strong> No schema, checksum, or handshake between stages. A malformed spec propagates silently through Implementer, Reviewer, and QA Tester. File presence is treated as correctness.</li>
+        <li><strong>No observability infrastructure.</strong> No structured event log, no flight recorder. When the system fails silently, there is no artifact to diagnose from. Post-mortem is impossible.</li>
+        <li><strong>No idempotency or atomic writes.</strong> An interrupted agent leaves a half-written file. The next stage reads it without complaint. A crashed Implementer corrupts its artifact; the Reviewer reviews it confidently.</li>
+        <li><strong>No recovery semantics.</strong> Mid-pipeline failures leave STATUS.md, DECISIONS.md, and retry counters in indeterminate state. No rollback. No checkpoint. The next run inherits garbage state from the previous failed run.</li>
+        <li><strong>Write-only feedback loop.</strong> Each agent writes output but does not read predecessor reasoning. Compounding errors are invisible because no agent has visibility into <em>why</em> the prior stage made its choices.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="verdict-card recommendation">
+    <div class="card-header">📋 The Recommendation</div>
+    <div class="card-body">
+      <p><strong>Do not run AIBuilder on any real feature until the known bugs and the five architectural gaps are addressed.</strong></p>
+      <p><strong>Priority 1 — Fix the 7 known bugs</strong> (Executor's list, ordered by kill-on-run-day impact). The system cannot demonstrate any other property if it deadlocks on startup. These are the pre-requisites.</p>
+      <p><strong>Priority 2 — Add observability</strong> before running any real workload. A structured event log is the minimum prerequisite for trusting system output. Every other fix is partially blind without it.</p>
+      <p><strong>Priority 3 — Atomic writes and recovery semantics.</strong> Without these, unattended operation will eventually corrupt state and produce garbage output that the system cannot detect or discard.</p>
+      <p>The pipeline architecture is not wrong in principle for known-domain features. But it is missing the infrastructure that makes autonomous systems trustworthy: the ability to detect its own failures, record what happened, refuse corrupt inputs, and recover to a known-good state.</p>
+    </div>
+  </div>
+
+  <div class="verdict-card one-thing">
+    <div class="card-header">⚡ The One Thing to Do First</div>
+    <div class="card-body" style="background: #f0f7ff;">
+      <p><strong>Add a structured append-only event log.</strong></p>
+      <p>Every agent, Conductor, and cron job writes one line on each state transition: timestamp, agent role, feature ID, status, action. This is the single change that makes every other problem diagnosable. Without it, you cannot confirm any fix worked. You cannot detect the retry key collision. You cannot see the STATUS.md deadlock happening. You cannot distinguish silent success from silent failure.</p>
+      <p>It costs one log-write call per agent output block and one shared log path in the environment. Do this before running the system on any real feature.</p>
+    </div>
+  </div>
+
+  <!-- Complete issue list -->
+  <div class="verdict-card" style="margin-top: 28px;">
+    <div class="card-header" style="background: #f8f9fa; color: #374151; border-color: #e5e7eb;">Complete Issue List</div>
+    <div class="card-body">
+      <ul class="issue-list">
+        <li><span class="badge badge-critical">CRITICAL</span> Fresh STATUS.md has no feature rows — Conductor idles forever; devloop-start.sh must populate from FEATURES.md</li>
+        <li><span class="badge badge-critical">CRITICAL</span> <code>AskUserQuestion</code> in dev-spec-author.md tools doesn't exist; agent fails on any ambiguity → watchdog kills it → wasted retry</li>
+        <li><span class="badge badge-critical">CRITICAL</span> BrowserControl missing from dev-qa-tester.md frontmatter tools — QA agent cannot do browser automation</li>
+        <li><span class="badge badge-critical">CRITICAL</span> No dev server startup before e2e tests — Test Author runs <code>pnpm test:e2e</code> against nothing</li>
+        <li><span class="badge badge-high">HIGH</span> Retry counter collision — <code>${FEATURE}:dev-implementer</code> key shared between implementing stage and review-retry; premature Tier 4 escalation</li>
+        <li><span class="badge badge-high">HIGH</span> Stale Codex references in implementer/test-author/reviewer — creates false preconditions; Reviewer logic undefined in actual environment</li>
+        <li><span class="badge badge-high">HIGH</span> Session rotation at tick 50 drops in-flight agent completions — no drain step before self-termination (NEW — found by Contrarian only)</li>
+        <li><span class="badge badge-high">HIGH</span> dev-test-author description says "parallel" but pipeline is strictly sequential</li>
+        <li><span class="badge badge-arch">ARCHITECTURAL</span> No inter-agent output validation — malformed spec propagates silently through all downstream stages</li>
+        <li><span class="badge badge-arch">ARCHITECTURAL</span> No observability infrastructure — no structured event log; post-mortem impossible; cannot confirm fixes worked</li>
+        <li><span class="badge badge-arch">ARCHITECTURAL</span> No idempotency / atomic writes — interrupted agents leave corrupt artifacts that downstream agents consume without complaint</li>
+        <li><span class="badge badge-arch">ARCHITECTURAL</span> No recovery semantics — mid-pipeline failures leave state files in garbage state; next run inherits corruption</li>
+        <li><span class="badge badge-arch">ARCHITECTURAL</span> Write-only feedback loop — agents blind to predecessor reasoning; compounding errors invisible until human review</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Collapsible advisor sections -->
+  <div style="margin-top: 28px; margin-bottom: 10px; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Full Advisor Responses</div>
+
+  <details>
+    <summary>
+      <span class="advisor-label label-contrarian">The Contrarian</span>
+      7 ranked failure modes — all confirmed by peer review
+    </summary>
+    <div class="advisor-content">
+      <p><strong>1. QA Tester dead on arrival.</strong> BrowserControl not in tools frontmatter. Agent fails every UI test silently or with bash errors. Every feature cycles through retries → Tier 4. Not a doc bug — a broken agent.</p>
+      <p><strong>2. E2E tests run against nothing.</strong> No dev server before test-authoring. "All tests GREEN" is structurally impossible to satisfy.</p>
+      <p><strong>3. Retry budget poisoning is silent and guaranteed.</strong> 2 implementing failures + 1 review failure = immediate Tier 4 via shared counter key. Not an edge case — the default path for non-trivial features.</p>
+      <p><strong>4. Fresh project deadlocks silently.</strong> Conductor logs "idle" forever. No trigger to populate STATUS.md from Inception output. Pipeline never starts.</p>
+      <p><strong>5. Codex references are live stale state.</strong> Reviewer instructed "if Implementer ran on Codex..." — permanently false precondition. Reviewer behavior is undefined in practice.</p>
+      <p><strong>6. AskUserQuestion blocks unattended spec author.</strong> Tool doesn't exist. 30-min watchdog kills it. Wasted retry every time a spec has ambiguity.</p>
+      <p><strong>7. Session rotation at tick 50 drops in-flight completions.</strong> Nothing drains active agents before self-termination. Completions written during restart window get dropped.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>
+      <span class="advisor-label label-firstprinciples">First Principles</span>
+      Software development is not a pipeline
+    </summary>
+    <div class="advisor-content">
+      <p>The central assumption is wrong. A pipeline implies deterministic stage transitions. Software development is a search problem under uncertainty — specs reveal ambiguities when implementation begins; tests expose requirements the spec never articulated.</p>
+      <p>The system treats STATUS.md as ground truth. Ground truth is the running system. Every abstraction layer is a lossy encoding; errors compound. By QA Tester stage, the original intent has been telephone-gamed through four agents.</p>
+      <p>The most dangerous failure mode: <strong>confident wrongness at scale</strong> — coherent, test-passing output that solves the wrong problem. No stage asks "is this what we needed?"</p>
+      <p>The right question: "Where does human judgment re-enter the loop, and is that checkpoint load-bearing or ceremonial?"</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>
+      <span class="advisor-label label-expansionist">Expansionist</span>
+      The team is building a factory, not a tool
+    </summary>
+    <div class="advisor-content">
+      <p>The architecture — file-based state, restartable agents, pipeline stages — is a reusable manufacturing line. Multiple parallel Conductors = N products simultaneously. One server, infinite products.</p>
+      <p>Pipeline termination at <code>done</code> is the wrong endpoint. Real software evolves. Post-deploy monitoring feeding back into FEATURES.md = living system.</p>
+      <p>DECISIONS.md is undervalued institutional memory. Indexable across projects, the system gets smarter with each project — cross-project learning, the Conductor stops starting from zero.</p>
+      <p>The 10x framing isn't "build software faster." It's autonomous product portfolio management.</p>
+      <p><em>Note: All five peer reviewers identified this response as the biggest blind spot — vision without engagement with actual failure modes.</em></p>
+    </div>
+  </details>
+
+  <details>
+    <summary>
+      <span class="advisor-label label-outsider">The Outsider</span>
+      Every failure is silent — user has no diagnostic signal
+    </summary>
+    <div class="advisor-content">
+      <p>Following the docs exactly:</p>
+      <p><strong>Phase 1:</strong> The BA agent calls AskUserQuestion. The tool doesn't exist. The agent fails mid-inception. The error looks like a tool resolution failure — user assumes they installed something wrong.</p>
+      <p><strong>Phase 2:</strong> devloop-start.sh creates STATUS.md with empty headers. Conductor reads it, finds nothing, logs "idle" forever. System appears running. Nothing happens. No error. A first-time user waits indefinitely.</p>
+      <p>This is the worst kind of failure: <strong>silent, plausible-looking, and pointing nowhere.</strong></p>
+      <p>Stale Codex docs give readers a completely wrong mental model. BrowserControl silently unavailable. Core problem: the system provides no indication of where it is or what broke.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>
+      <span class="advisor-label label-executor">The Executor</span>
+      5 concrete fixes ordered by kill-on-run-day priority
+    </summary>
+    <div class="advisor-content">
+      <p><strong>1. STATUS.md deadlock</strong> — In devloop-start.sh, after STATUS.md init: <code>grep -oE '^## (F-[0-9]+)' "$PROJECT_DIR/FEATURES.md" | sed 's/## //' | while read F; do echo "| $F | pending |" >> STATUS.md; done</code></p>
+      <p><strong>2. AskUserQuestion</strong> — Remove from dev-spec-author.md tools list. Replace body references (lines 77, 93) with "document in [NEEDS CLARIFICATION] section."</p>
+      <p><strong>3. No server before e2e</strong> — In dev-test-author.md: add step to read CODING_STANDARDS.md for server start command, start in background, wait for reachability, then run tests.</p>
+      <p><strong>4. Retry counter collision</strong> — Use <code>${FEATURE}:${ROLE}:review-retry</code> as key when re-dispatching from review failure; separate from implementing-stage counter.</p>
+      <p><strong>5. Wrong metadata</strong> — Add BrowserControl to QA Tester frontmatter tools. Replace Codex refs with actual models (claude-sonnet-4-6, claude-opus-4-7). Update test-author description from "parallel" to "sequential."</p>
+    </div>
+  </details>
+
+  <!-- Peer review section -->
+  <div style="margin-top: 28px; margin-bottom: 10px; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Peer Review Highlights</div>
+
+  <details>
+    <summary>All 5 Peer Reviews — click to expand</summary>
+    <div style="padding: 0 18px 18px;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px;">
+        <thead>
+          <tr style="border-bottom: 2px solid #e2e8f0;">
+            <th style="text-align: left; padding: 8px; color: #64748b; font-weight: 600;">Reviewer</th>
+            <th style="text-align: left; padding: 8px; color: #64748b; font-weight: 600;">Strongest</th>
+            <th style="text-align: left; padding: 8px; color: #64748b; font-weight: 600;">Biggest Blind Spot</th>
+            <th style="text-align: left; padding: 8px; color: #64748b; font-weight: 600;">All Missed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px;">Reviewer 1</td>
+            <td style="padding: 8px;">E (actionable, file-specific)</td>
+            <td style="padding: 8px;">C (vision not analysis)</td>
+            <td style="padding: 8px;">Inter-agent output validation — no schema between stages</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px;">Reviewer 2</td>
+            <td style="padding: 8px;">A (causal chain)</td>
+            <td style="padding: 8px;">C (answers different question)</td>
+            <td style="padding: 8px;">No observability / structured event log / flight recorder</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px;">Reviewer 3</td>
+            <td style="padding: 8px;">A (systematic + new finding #7)</td>
+            <td style="padding: 8px;">C (no failure modes)</td>
+            <td style="padding: 8px;">No idempotency — half-written files from interrupted agents</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px;">Reviewer 4</td>
+            <td style="padding: 8px;">A (specific, severity-ranked)</td>
+            <td style="padding: 8px;">C (vision not analysis)</td>
+            <td style="padding: 8px;">Write-only feedback loop — agents blind to predecessor reasoning</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px;">Reviewer 5</td>
+            <td style="padding: 8px;">A (diagnostic)</td>
+            <td style="padding: 8px;">C (romanticizes architecture)</td>
+            <td style="padding: 8px;">No recovery semantics — mid-pipeline failure leaves garbage state</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
+</div>
+
+<div class="footer">
+  Council #4 &nbsp;·&nbsp; 2026-05-04 &nbsp;·&nbsp; AIBuilder System Audit<br>
+  5 advisors · 5 peer reviews · Chairman synthesis · Transcript: council-transcript-20260504d.md
+</div>
+
+</body>
+</html>

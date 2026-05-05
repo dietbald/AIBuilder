@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIBuilder Council Report — 2026-05-04</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; color: #1a1a1a; line-height: 1.6; }
+  .container { max-width: 860px; margin: 0 auto; padding: 32px 24px; }
+
+  /* Header */
+  .header { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 28px 32px; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+  .header .question { font-size: 14px; color: #475569; background: #f1f5f9; border-left: 3px solid #6366f1; padding: 12px 16px; border-radius: 0 4px 4px 0; margin-top: 12px; }
+  .header .meta { font-size: 12px; color: #94a3b8; margin-top: 10px; }
+
+  /* Verdict */
+  .verdict { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 24px; overflow: hidden; }
+  .verdict-header { background: #0f172a; color: #fff; padding: 16px 24px; }
+  .verdict-header h2 { font-size: 15px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+  .verdict-body { padding: 24px; }
+  .verdict-section { margin-bottom: 24px; }
+  .verdict-section:last-child { margin-bottom: 0; }
+  .verdict-section h3 { font-size: 14px; font-weight: 600; color: #0f172a; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+  .verdict-section p { font-size: 14px; color: #374151; margin-bottom: 10px; }
+  .verdict-section p:last-child { margin-bottom: 0; }
+  .verdict-section strong { color: #0f172a; }
+
+  /* One thing */
+  .one-thing { background: #fefce8; border: 1px solid #fde047; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; }
+  .one-thing h3 { font-size: 13px; font-weight: 600; color: #854d0e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .one-thing p { font-size: 14px; color: #713f12; }
+
+  /* Agreement grid */
+  .grid-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 24px; overflow: hidden; }
+  .grid-card-header { padding: 14px 20px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; }
+  .grid-card-body { padding: 16px 20px; }
+
+  .agreement-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .agreement-table th { text-align: left; font-weight: 600; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 10px; background: #f8fafc; }
+  .agreement-table td { padding: 8px 10px; border-top: 1px solid #f1f5f9; }
+  .agreement-table tr:hover td { background: #f8fafc; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+  .badge-fatal { background: #fee2e2; color: #991b1b; }
+  .badge-missed { background: #fef3c7; color: #92400e; }
+  .badge-structural { background: #ede9fe; color: #5b21b6; }
+
+  /* Advisor positions */
+  .positions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .position-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 14px; }
+  .position-card .advisor-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6366f1; margin-bottom: 4px; }
+  .position-card .position-text { font-size: 13px; color: #374151; }
+  .position-card.agree { border-left: 3px solid #16a34a; }
+  .position-card.warn { border-left: 3px solid #ea580c; }
+  .position-card.macro { border-left: 3px solid #6366f1; }
+
+  /* Collapsible sections */
+  details { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+  details summary { padding: 14px 20px; font-size: 14px; font-weight: 600; cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after { content: '+'; font-size: 18px; color: #94a3b8; }
+  details[open] summary::after { content: '−'; }
+  details summary:hover { background: #f8fafc; }
+  .details-body { padding: 20px 20px 24px; border-top: 1px solid #e2e8f0; font-size: 14px; color: #374151; }
+  .details-body p { margin-bottom: 12px; }
+  .details-body p:last-child { margin-bottom: 0; }
+  .details-body pre { background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 6px; font-size: 13px; overflow-x: auto; margin: 12px 0; font-family: 'Cascadia Code', 'Fira Code', monospace; }
+  .details-body ol, .details-body ul { padding-left: 20px; margin: 10px 0; }
+  .details-body li { margin-bottom: 6px; }
+  .details-body strong { color: #0f172a; }
+
+  /* Advisor tag */
+  .advisor-tag { display: inline-block; padding: 2px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; margin-right: 8px; }
+  .tag-contrarian { background: #fee2e2; color: #991b1b; }
+  .tag-firstprinciples { background: #ede9fe; color: #5b21b6; }
+  .tag-expansionist { background: #d1fae5; color: #065f46; }
+  .tag-outsider { background: #fef3c7; color: #92400e; }
+  .tag-executor { background: #dbeafe; color: #1e40af; }
+
+  /* Reviewer section */
+  .reviewer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .reviewer-card { border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; background: #f8fafc; }
+  .reviewer-card .reviewer-num { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; }
+  .reviewer-card p { font-size: 13px; color: #374151; margin-bottom: 6px; }
+
+  /* Footer */
+  .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; }
+
+  /* Section label */
+  .section-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>AIBuilder Council Report</h1>
+    <div class="question">
+      <strong>Question:</strong> TJ has built AIBuilder — a generic autonomous dev system using tmux + <code>claude --print --agent</code>. Is it ready to run? What breaks on first execution, and what must be fixed before launch?
+    </div>
+    <div class="meta">5 advisors · 5 peer reviewers · 1 chairman synthesis · 2026-05-04</div>
+  </div>
+
+  <!-- One Thing -->
+  <div class="one-thing">
+    <h3>The One Thing to Do First</h3>
+    <p>Read <code>dev-conductor.md</code> and <code>devloop-start.sh</code> in full before writing a single line of fix code. Every proposed fix in this council was written without confirming exactly how STATUS.md is read, written, and interpreted on re-entry. The loop fix is useless if the Conductor's prompt re-dispatches in-progress features on every tick. The actual text of those two files determines whether the fix is four lines or forty.</p>
+  </div>
+
+  <!-- Chairman Verdict -->
+  <div class="verdict">
+    <div class="verdict-header"><h2>Council Verdict</h2></div>
+    <div class="verdict-body">
+
+      <div class="verdict-section">
+        <h3>Where the Council Agrees</h3>
+        <p>All five advisors independently identified three structural defects — unanimous convergence makes these high-confidence facts, not opinions:</p>
+        <p><strong>1. The loop does not loop.</strong> <code>claude --print</code> is a one-shot call. <code>devloop-start.sh</code> launches the Conductor once and exits. Nothing relaunches it. This is not a configuration error — it is an architectural gap that produces zero features.</p>
+        <p><strong>2. The tmux session name is wrong.</strong> The start script creates <code>devloop-${PROJECT_NAME}</code>. The Conductor dispatches to <code>devloop</code>. Different sessions. Every dispatch command either fails silently or creates windows in an unmonitored orphan session.</p>
+        <p><strong>3. There is no inception path.</strong> The system assumes FEATURES.md exists. On a new project, it doesn't. The Conductor reads a missing file, produces undefined output, and exits.</p>
+      </div>
+
+      <div class="verdict-section">
+        <h3>Where the Council Clashes</h3>
+        <p><strong>Bug fix vs. architectural rethink.</strong> The Contrarian and Executor say the three defects are implementation oversights — fixable in an afternoon. The First Principles Thinker says the loop bug is a symptom of a deeper category error: the design assumes a stateful orchestrator where only disconnected one-shot calls exist. Both are right in different time horizons. The Executor wins the question "what breaks on first run." The First Principles Thinker wins the question "what breaks on the tenth run."</p>
+        <p><strong>Is the inception gate a guard clause or a product requirement?</strong> The Expansionist called it "a conditional check and a script call." Peer reviewers correctly pushed back: if FEATURES.md doesn't exist, the entire project context is undefined. The inception sequence is itself an LLM call with no validation that its output is correctly structured. Not an afternoon fix.</p>
+      </div>
+
+      <div class="verdict-section">
+        <h3>Blind Spots the Council Caught</h3>
+        <p><strong>The re-entry and double-dispatch problem</strong> (caught by all 5 peer reviewers — highest confidence signal in this council). When the Conductor relaunches after <code>sleep 180</code>, it reads STATUS.md to determine what's in progress. But STATUS.md is being written by agents that are <em>still running</em>. The Conductor has no mechanism to detect in-progress work. It will re-dispatch already-running features. Two concurrent agents write to the same files with no locking. This is not an edge case — it is the default operating mode for any feature taking longer than 3 minutes.</p>
+        <p><strong>The Co-Conductor has the same dead-on-arrival problem</strong> (caught by Reviewer 3 alone — highest originality signal). All five advisors described the Co-Conductor as a supervisor that "checks every 15 minutes." But who is calling it every 15 minutes? If it uses the same shell loop mechanism, it is also a one-shot call that runs once and exits. The supervision layer that is supposed to catch a broken Conductor may be broken in exactly the same way.</p>
+      </div>
+
+      <div class="verdict-section">
+        <h3>The Recommendation</h3>
+        <p>The system is <strong>not ready to run</strong>. Three fixes required, in order:</p>
+        <p><strong>Fix 1 (load-bearing):</strong> Add the while loop in <code>devloop-start.sh</code>. Without this, nothing else matters.</p>
+        <p><strong>Fix 2 (same commit):</strong> Fix the tmux session name in <code>dev-conductor.md</code>. Change <code>devloop</code> → <code>devloop-${PROJECT_NAME}</code>. Once the loop is running, every tick will immediately hit the broken session name.</p>
+        <p><strong>Fix 3 (mandatory, not optional):</strong> Add idempotency to the Conductor's STATUS.md read logic. The Conductor must explicitly skip features marked <code>in-progress</code> or <code>complete</code> on re-entry. Without this, Fix 1 makes double-dispatch structural and permanent.</p>
+        <p>The Co-Conductor's scheduling mechanism must also be audited before the first real run. The Expansionist's market upside is real — but it's contingent on the system actually working, which requires Fix 3, not just Fixes 1 and 2.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Agreement visual -->
+  <div class="grid-card">
+    <div class="grid-card-header" style="background:#f8fafc; color:#374151;">Issue Map</div>
+    <div class="grid-card-body">
+      <table class="agreement-table">
+        <thead>
+          <tr>
+            <th>Issue</th>
+            <th>Type</th>
+            <th>Advisors who flagged it</th>
+            <th>Fix complexity</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>No while loop — conductor runs once and dies</td>
+            <td><span class="badge badge-fatal">Fatal</span></td>
+            <td>All 5</td>
+            <td>4 lines of shell</td>
+          </tr>
+          <tr>
+            <td>Tmux session name mismatch (devloop vs devloop-PROJECT)</td>
+            <td><span class="badge badge-fatal">Fatal</span></td>
+            <td>All 5</td>
+            <td>1 grep-and-replace</td>
+          </tr>
+          <tr>
+            <td>No inception path — assumes FEATURES.md exists</td>
+            <td><span class="badge badge-fatal">Fatal</span></td>
+            <td>All 5</td>
+            <td>Medium (bootstrapping problem)</td>
+          </tr>
+          <tr>
+            <td>Double-dispatch on re-entry (no STATUS.md idempotency)</td>
+            <td><span class="badge badge-missed">Blind spot</span></td>
+            <td>All 5 peer reviewers</td>
+            <td>Conductor prompt rewrite</td>
+          </tr>
+          <tr>
+            <td>Co-Conductor may also be a one-shot non-looping call</td>
+            <td><span class="badge badge-missed">Blind spot</span></td>
+            <td>Reviewer 3 only</td>
+            <td>Audit co-conductor-loop.sh</td>
+          </tr>
+          <tr>
+            <td>LLM-as-orchestrator reliability unvalidated</td>
+            <td><span class="badge badge-structural">Structural</span></td>
+            <td>First Principles, Outsider</td>
+            <td>Requires a real test run</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Advisor positions -->
+  <div class="grid-card">
+    <div class="grid-card-header" style="background:#f8fafc; color:#374151;">Advisor Positions</div>
+    <div class="grid-card-body">
+      <div class="positions-grid">
+        <div class="position-card agree">
+          <div class="advisor-name">The Contrarian</div>
+          <div class="position-text">Three fatal issues. System produces zero features. All fixable, but fix the loop wrapper first.</div>
+        </div>
+        <div class="position-card warn">
+          <div class="advisor-name">The First Principles Thinker</div>
+          <div class="position-text">Category error at the core. A stateless system pretending to be stateful. Fixing bugs doesn't validate the architecture.</div>
+        </div>
+        <div class="position-card macro">
+          <div class="advisor-name">The Expansionist</div>
+          <div class="position-text">Bugs are afternoon fixes. If this works at 60% efficiency it's worth more than BidPlatform. Run it on a greenfield project first.</div>
+        </div>
+        <div class="position-card warn">
+          <div class="advisor-name">The Outsider</div>
+          <div class="position-text">No observable failure modes. First run UX is completely undefined. Define what success looks like before fixing the loop.</div>
+        </div>
+        <div class="position-card agree">
+          <div class="advisor-name">The Executor</div>
+          <div class="position-text">Fix the loop (4 lines). Fix the tmux name (1 grep). Add the inception gate. Do not run before fixes 1 and 2.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collapsible advisor responses -->
+  <div class="section-label">Full Advisor Responses</div>
+
+  <details>
+    <summary><span class="advisor-tag tag-contrarian">Contrarian</span> The system cannot run. Full stop.</summary>
+    <div class="details-body">
+      <p><strong>Issue 1 — The conductor is a dead man's switch with no trigger.</strong> <code>claude --print</code> exits after one response. devloop-start.sh launches it once and walks away. There is no loop. The conductor wakes up, reads FEATURES.md, maybe dispatches one agent, then dies. Nothing relaunches it. The 15-minute co-conductor check will find a dead conductor and have no mechanism to restart it.</p>
+      <p><strong>Issue 2 — The tmux session name is wrong everywhere it matters.</strong> The start script creates <code>devloop-BidPlatform</code>. The conductor's dispatch code attaches to <code>devloop</code>. These are different sessions. Every <code>tmux new-window -t devloop</code> command will either fail silently or attach to the wrong session. Feature agents will either not launch or launch in an orphaned session nobody is monitoring.</p>
+      <p><strong>Issue 3 — There's no inception path.</strong> The conductor assumes FEATURES.md exists, is complete, and is structured exactly as it expects. If you run this on a new project, the conductor's first action will be to read a file that doesn't exist, produce a malformed output, and exit.</p>
+      <p>The system is architecturally sound in intent. The loop bug, the naming bug, and the missing inception gate are fixable in an afternoon. But right now, as written, the system produces exactly zero features on first run. Fix the shell loop wrapper first.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-tag tag-firstprinciples">First Principles</span> The category error at the center of the design.</summary>
+    <div class="details-body">
+      <p>Strip away the implementation details. What does AIBuilder do? It takes a FEATURES.md file and attempts to produce working code for each feature, autonomously, using LLM agents. The thesis is: an LLM can reliably interpret a feature specification, write tests, write implementation, review its own work, and merge — without human intervention beyond the initial spec. That thesis has not been validated.</p>
+      <p><code>claude --print</code> is a one-shot call — the conductor is not a persistent process, it's a series of one-shot calls pretending to be a loop. This is the category error at the center of the design.</p>
+      <p>Everything will break, once, immediately, on the first tick. Not because of a bug in a shell script, but because the architecture assumes a stateful orchestrator where none exists. The conductor's "memory" is STATUS.md — a flat file being read and written by a series of disconnected LLM calls. Race conditions, partial writes, and inconsistent reads are not edge cases here; they are the default operating mode.</p>
+      <p>The fixes are real: add the while loop, fix the tmux names, add the inception gate. But don't mistake fixing those bugs for validating the architecture.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-tag tag-expansionist">Expansionist</span> The bugs are a gift — afternoon fixes, not architectural failures.</summary>
+    <div class="details-body">
+      <p>The shell loop missing is a three-line fix. The tmux naming mismatch is a one-line fix. The inception gate is a conditional check and a script call. None of these are design flaws. They're implementation oversights.</p>
+      <p>If this works at even 60% efficiency, TJ has just built something worth more than BidPlatform itself. Southeast Asian govtech alone has hundreds of agencies that can't afford development teams. If AIBuilder can take a FEATURES.md and produce working code, the addressable market is every underfunded digital transformation project in ASEAN.</p>
+      <p>The real question is: what's the first project you run it on after the fixes? Don't run it on BidPlatform — too much is already built, too much context. Find a greenfield project with a clean FEATURES.md and 10-15 well-defined features. See what percentage of features it produces correctly. That number is the real evaluation.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-tag tag-outsider">Outsider</span> No observable failure modes. Success is undefined.</summary>
+    <div class="details-body">
+      <p>The phrase "LLM conductor interprets bash pseudocode" is used as if it's a minor implementation detail. It's the entire problem. Every decision the conductor makes is a probabilistic inference, not a deterministic computation. When it reads "if STATUS.md shows feature X is complete, dispatch feature Y," it might do exactly that — or it might hallucinate a different reading of STATUS.md.</p>
+      <p>There are no observable failure modes. When this system breaks — and it will break — how does TJ know? The co-conductor checks every 15 minutes, but it's also an LLM making probabilistic decisions. The escalation goes to Telegram, but what does the Telegram message say? "Something seems wrong" is not an actionable alert.</p>
+      <p>The first run isn't a soft launch. It's a single LLM call that generates output and exits. The user won't see a dashboard, a progress bar, or a log stream. They'll see a tmux session with a conductor window that is either stopped or blank. Define what success looks like from the outside before fixing the loop bug.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-tag tag-executor">Executor</span> The loop doesn't loop. Here's the exact fix.</summary>
+    <div class="details-body">
+      <p>devloop-start.sh launches the conductor once: <code>claude --print --agent "$CONDUCTOR_BOOT"</code>. This runs, exits, and is never called again.</p>
+      <p>The fix:</p>
+      <pre>while true; do
+  claude --print --agent "$AIBUILDER_DIR/.claude/agents/dev-conductor.md"
+  sleep 180
+done</pre>
+      <p>After that, in priority order:</p>
+      <ol>
+        <li>Fix the tmux session name. In dev-conductor.md, replace <code>devloop</code> with <code>devloop-${PROJECT_NAME}</code>. One grep-and-replace.</li>
+        <li>Add the inception gate. At the top of devloop-start.sh, before launching the conductor: check if FEATURES.md exists. If not, run the inception sequence first.</li>
+        <li>Update BidPlatform/AGENTS.md to remove the stale <code>.claude/agents/&lt;id&gt;.md</code> references.</li>
+      </ol>
+      <p>Do not run this system before fixing #1 and #2. Fix #1 now. Fix #2 in the same commit.</p>
+    </div>
+  </details>
+
+  <!-- Peer reviews -->
+  <details>
+    <summary>Peer Review Highlights (5 reviewers)</summary>
+    <div class="details-body">
+      <p><strong>Strongest response:</strong> E (Executor) — unanimous across all 5 reviewers. Only response with executable fixes and correct sequencing.</p>
+      <p><strong>Biggest blind spot:</strong> C (Expansionist) — unanimous across all 5 reviewers. Pivots to market upside before confirming the system can produce a single feature. "Run it and let it break" is irresponsible when there are no observable failure modes.</p>
+      <p><strong>What all five advisors missed (caught by peer review):</strong></p>
+      <ul>
+        <li><strong>Re-entry / double-dispatch</strong> (4 of 5 reviewers flagged this): When the conductor loop relaunches every 180s, it re-reads STATUS.md. But STATUS.md is being written by agents still running from the previous tick. The Conductor will re-dispatch in-progress features. Two concurrent agents writing to the same files with no locking is the default operating mode, not an edge case.</li>
+        <li><strong>Co-Conductor scheduling gap</strong> (Reviewer 3 only): All five advisors assumed the Co-Conductor "checks every 15 minutes" — but who calls it every 15 minutes? If it's also a one-shot <code>claude --print</code> call driven by the same broken loop mechanism, the supervision layer that's supposed to catch a broken Conductor is equally broken.</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- Footer -->
+  <div class="footer">
+    LLM Council · AIBuilder readiness review · 2026-05-04<br>
+    Methodology: Karpathy multi-advisor council · 5 advisors → 5 peer reviewers → chairman synthesis
+  </div>
+
+</div>
+</body>
+</html>
