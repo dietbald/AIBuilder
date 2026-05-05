@@ -29,7 +29,8 @@ If any prerequisite fails, write a BLOCKED entry to STATUS.md and stop.
 ### Step 1 — Create a Git Commit and PR
 
 ```bash
-git add -p  # interactive staging — review each change
+git diff --stat HEAD  # show what will be committed
+git add -A            # stage all changes non-interactively (headless session — no interactive TUI)
 git commit -m "feat(<area>): <feature-name>
 
 <brief description>

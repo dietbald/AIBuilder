@@ -156,10 +156,13 @@ esac
 # Kill any leftover session from a previous attempt
 tmux kill-session -t "$AGENT_SESSION" 2>/dev/null || true
 
-# Create new session (one window) and launch the agent headless
+# Create new session (one window) and launch the agent headless.
+# Export env vars explicitly — tmux sessions are independent login shells that do not
+# inherit the Conductor's environment. Without these exports, $PROJECT_DIR is empty in
+# any bash commands the sub-agent runs.
 tmux new-session -d -s "$AGENT_SESSION"
 tmux send-keys -t "$AGENT_SESSION" \
-  "cd '$PROJECT_DIR' && claude --model $AGENT_MODEL --print --agent '$PROMPT_FILE' > '$OUTPUT' 2>&1; echo EXIT_CODE=\$?" \
+  "export PROJECT_DIR='$PROJECT_DIR' AIBUILDER_DIR='$AIBUILDER_DIR' PROJECT_NAME='$PROJECT_NAME' && cd '$PROJECT_DIR' && claude --model $AGENT_MODEL --print --agent '$PROMPT_FILE' > '$OUTPUT' 2>&1; echo EXIT_CODE=\$?" \
   Enter
 
 # Record dispatch time for timeout watchdog

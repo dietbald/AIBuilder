@@ -94,11 +94,11 @@ REJECTED — <n> issues found. Return to Spec Author for revision.
 
 **If VERIFIED:**
 - Edit `02-specs/<feature>/spec.md` frontmatter: set `verified: true`
-- Update `05-progress/STATUS.md`: feature → `spec-verified`
+- Do NOT touch STATUS.md — the Conductor reads your AGENT_OUTPUT verdict and advances the feature state.
 
 **If REJECTED:**
 - Do NOT edit the spec's frontmatter
-- Update STATUS.md: feature → `spec-revision`
+- Do NOT touch STATUS.md — the Conductor reads your AGENT_OUTPUT verdict and sets the feature to `spec-revision`.
 
 Then write the schema block:
 

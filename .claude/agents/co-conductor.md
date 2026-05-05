@@ -108,11 +108,10 @@ TELEGRAM_TARGET=$(grep TELEGRAM_TARGET "$PROJECT_DIR/.devloop/config" 2>/dev/nul
 
 ### Level 2: Drift — send realignment
 ```bash
-FEATURES_SUMMARY=$(grep -E '^(F-[0-9]+|##|###|\|)' "$PROJECT_DIR/FEATURES.md" | head -20)
-STATUS_SUMMARY=$(grep -E '\| F-' "$PROJECT_DIR/05-progress/STATUS.md" | head -10)
-
+# Do NOT embed STATUS.md or FEATURES.md content inline — multi-line variables passed through
+# tmux send-keys treat each newline as Enter, shattering shell state. Pass file paths instead.
 tmux send-keys -t "conductor-${PROJECT_NAME}" \
-  "Co-Conductor realignment: STATUS.md appears misaligned. Expected features: ${FEATURES_SUMMARY}. Current: ${STATUS_SUMMARY}. Re-read FEATURES.md and STATUS.md and correct any drift." \
+  "Co-Conductor realignment: STATUS.md appears misaligned with FEATURES.md. Re-read both files ($PROJECT_DIR/05-progress/STATUS.md and $PROJECT_DIR/FEATURES.md) and correct any drift." \
   Enter
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] DRIFT — sent realignment to Conductor" \
@@ -139,10 +138,11 @@ tmux send-keys -t "conductor-${PROJECT_NAME}" \
   "cd '$PROJECT_DIR' && claude --model claude-sonnet-4-6 --agent '$CONDUCTOR_AGENT'" Enter
 sleep 3
 
-# Send restart context
-STATUS_SUMMARY=$(cat "$PROJECT_DIR/05-progress/STATUS.md")
+# Send restart context — pass the file path, NOT the file contents.
+# Embedding STATUS.md inline in tmux send-keys means each newline fires as Enter,
+# sending partial shell commands and corrupting the new session's state entirely.
 tmux send-keys -t "conductor-${PROJECT_NAME}" \
-  "RESTART by Co-Conductor at $(date). Resume from current state — do NOT redo completed stages. STATUS: ${STATUS_SUMMARY}" \
+  "RESTART by Co-Conductor at $(date -u +%Y-%m-%dT%H:%M:%SZ). Resume from current state — do NOT redo completed stages. Re-read STATUS.md at $PROJECT_DIR/05-progress/STATUS.md to orient." \
   Enter
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] RESTART — Conductor was dead, relaunched" \

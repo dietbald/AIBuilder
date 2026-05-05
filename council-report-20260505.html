@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Council Report — AIBuilder Readiness Audit #5</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fa; color: #1a1a1a; line-height: 1.6; }
+  .header { background: #1a1a2e; color: white; padding: 32px 40px; }
+  .header h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .header .meta { font-size: 13px; color: #8892a0; }
+  .header .question { margin-top: 16px; font-size: 14px; color: #c0c8d4; background: rgba(255,255,255,0.08); padding: 12px 16px; border-radius: 6px; border-left: 3px solid #ef4444; }
+  .verdict-badge { display: inline-block; background: #ef4444; color: white; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 4px; margin-top: 12px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .container { max-width: 860px; margin: 0 auto; padding: 32px 24px; }
+
+  .verdict-card { background: white; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 20px; overflow: hidden; }
+  .verdict-card .card-header { padding: 14px 24px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; border-bottom: 1px solid #e2e8f0; }
+  .verdict-card .card-body { padding: 20px 24px; }
+  .card-body p { margin-bottom: 12px; font-size: 14px; }
+  .card-body p:last-child { margin-bottom: 0; }
+  .card-body ul { margin: 8px 0 12px 20px; }
+  .card-body li { font-size: 14px; margin-bottom: 6px; }
+
+  .agrees .card-header { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+  .clashes .card-header { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+  .blindspots .card-header { background: #fef3c7; color: #78350f; border-color: #fcd34d; }
+  .recommendation .card-header { background: #f8f9fa; color: #374151; border-color: #e5e7eb; }
+  .one-thing .card-header { background: #1a1a2e; color: white; border-color: #1a1a2e; }
+  .one-thing .card-body { background: #f0f4ff; }
+
+  code { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 12px; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: 8px; font-size: 12px; margin: 12px 0; overflow-x: auto; }
+
+  /* Bug list */
+  .bug-list { list-style: none; margin: 0; }
+  .bug-list li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; align-items: flex-start; }
+  .bug-list li:last-child { border-bottom: none; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+  .badge-fatal { background: #fee2e2; color: #991b1b; }
+  .badge-high { background: #ffedd5; color: #9a3412; }
+  .badge-confirmed { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+  .badge-open { background: #e0e7ff; color: #3730a3; }
+  .badge-wrong { background: #f3f4f6; color: #6b7280; text-decoration: line-through; }
+
+  /* Advisor grid */
+  .advisor-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 16px 0 24px; }
+  .advisor-box { border-radius: 8px; padding: 10px 8px; text-align: center; }
+  .advisor-box .name { font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+  .advisor-box .stance { font-size: 10px; color: #64748b; }
+  .a-grounded { background: #fee2e2; border: 1px solid #fca5a5; }
+  .a-abstract { background: #e0e7ff; border: 1px solid #a5b4fc; }
+  .a-dismissed { background: #f3f4f6; border: 1px solid #d1d5db; }
+  .a-docs { background: #fef3c7; border: 1px solid #fde68a; }
+  .a-executor { background: #dcfce7; border: 1px solid #86efac; }
+
+  /* Peer review table */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 10px; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; }
+  td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+
+  details { background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; }
+  details summary { padding: 13px 18px; cursor: pointer; font-size: 14px; font-weight: 500; list-style: none; display: flex; align-items: center; gap: 10px; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: '▶'; font-size: 10px; color: #94a3b8; transition: transform 0.2s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  .advisor-label { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+  .label-c { background: #fee2e2; color: #991b1b; }
+  .label-fp { background: #e0e7ff; color: #3730a3; }
+  .label-ex { background: #f3e8ff; color: #6b21a8; }
+  .label-out { background: #fef3c7; color: #92400e; }
+  .label-exec { background: #dcfce7; color: #166534; }
+  .advisor-content { padding: 0 18px 18px; font-size: 13px; line-height: 1.7; border-top: 1px solid #f1f5f9; margin-top: 4px; }
+  .advisor-content p { margin-bottom: 10px; }
+
+  .footer { text-align: center; padding: 24px; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>LLM Council Report — AIBuilder Readiness Audit #5</h1>
+  <div class="meta">2026-05-05 &nbsp;·&nbsp; 5 advisors &nbsp;·&nbsp; 5 peer reviews &nbsp;·&nbsp; Chairman synthesis &nbsp;·&nbsp; Council #5 of 5</div>
+  <div class="question">
+    <strong>Question:</strong> AIBuilder has had 21 issues fixed across 4 audit rounds and is now published to GitHub. Is it ready to run on a real project? What would stop it?
+  </div>
+  <div class="verdict-badge">Verdict: NOT READY</div>
+</div>
+
+<div class="container">
+
+  <!-- Advisor positions -->
+  <div style="margin-bottom: 28px;">
+    <div style="font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Advisor Positions</div>
+    <div class="advisor-grid">
+      <div class="advisor-box a-grounded">
+        <div class="name">The Contrarian</div>
+        <div class="stance">Read files. Found 5 confirmed bugs. Voted strongest by all 5 reviewers.</div>
+      </div>
+      <div class="advisor-box a-abstract">
+        <div class="name">First Principles</div>
+        <div class="stance">CLI unverified. Env not inherited. No stuck-feature timeout.</div>
+      </div>
+      <div class="advisor-box a-dismissed">
+        <div class="name">Expansionist</div>
+        <div class="stance">Answered a different question. Unanimously dismissed.</div>
+      </div>
+      <div class="advisor-box a-docs">
+        <div class="name">The Outsider</div>
+        <div class="stance">No install guide. openclaw mystery. Interactive vs headless unclear.</div>
+      </div>
+      <div class="advisor-box a-executor">
+        <div class="name">The Executor</div>
+        <div class="stance">4 ordered blockers. Got 1 wrong (FEATURES.md regex actually works).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAIRMAN VERDICT -->
+  <div class="verdict-card agrees">
+    <div class="card-header">🔴 Where the Council Agrees — CONFIRMED BLOCKERS</div>
+    <div class="card-body">
+      <p><strong>The load-bearing unknown:</strong> <code>claude --print --agent &lt;file&gt;</code> has never been verified to work. If the flag combination is invalid, every sub-agent dispatch silently fails and the pipeline is a no-op. This must be answered empirically before anything else matters.</p>
+      <p><strong>Four bugs confirmed by file reads (Contrarian + Reviewer 4 both read the source):</strong></p>
+      <ul class="bug-list">
+        <li><span class="badge badge-fatal">FATAL</span> <code>git add -p</code> in dev-deployer.md — interactive TUI blocks headless <code>--print</code> session permanently. Watchdog kills it after 30 min every time. Pipeline can never reach staging.</li>
+        <li><span class="badge badge-fatal">FATAL</span> dev-spec-verifier.md writes STATUS.md directly (lines 96–97) — violates single-writer contract. Race condition with Conductor writes guaranteed.</li>
+        <li><span class="badge badge-fatal">FATAL</span> Co-conductor restart injects raw STATUS.md via tmux send-keys — newlines become Enter, pipes break quoting, shell state corrupted on any real project.</li>
+        <li><span class="badge badge-high">HIGH</span> Env vars not exported to sub-agent tmux sessions — <code>PROJECT_DIR</code>, <code>AIBUILDER_DIR</code>, <code>PROJECT_NAME</code> are empty in sub-agent environments.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="verdict-card clashes">
+    <div class="card-header">⚡ Where the Council Clashes</div>
+    <div class="card-body">
+      <p><strong>Factual dispute resolved by file read:</strong> The Executor claimed FEATURES.md format mismatch — inception outputs <code>### Feature Name</code>, not <code>## F-01-slug</code>, so the devloop-start.sh regex never matches. Reviewer 4 confirmed this is <strong>wrong</strong> — devloop-start.sh lines 74-80 handle both format variants. The bug doesn't exist. The Executor invented it.</p>
+      <p><strong>Unresolved:</strong> The Contrarian claims dev-auditor.md says "Best CLI: Gemini 2.5 Pro" but the Conductor has no Gemini dispatch path. Nobody confirmed this by reading the actual dispatch logic. Lower priority than the confirmed fatals but worth checking.</p>
+      <p><strong>Epistemic lesson:</strong> The Contrarian read files; its findings held up. The Executor listed conclusions without file reads; its unique finding was wrong. Specificity with grounding beats lists.</p>
+    </div>
+  </div>
+
+  <div class="verdict-card blindspots">
+    <div class="card-header">🔍 Blind Spots the Council Caught</div>
+    <div class="card-body">
+      <ul>
+        <li><strong>Idempotency on restart.</strong> What happens when devloop-start.sh runs against a project with STATUS.md already mid-flight? Does the conductor resume or overwrite? Real projects get interrupted. Untested and undocumented.</li>
+        <li><strong>Silent failure is operationally invisible.</strong> The watchdog detects conductor death. It does not detect sub-agent stalls. A headless pipeline that is silently failing looks identical to one running normally. No alerting mechanism exists for "agent X has been silent for N minutes."</li>
+        <li><strong>The system has never been run end-to-end.</strong> Not a code review problem — an empirical unknown. No one has watched a feature go from FEATURES.md to deployed code. Every analysis so far has been theoretical. "Ready" has no acceptance criterion.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="verdict-card recommendation">
+    <div class="card-header">📋 The Recommendation</div>
+    <div class="card-body">
+      <p><strong>No. It is not ready to run on a real project.</strong></p>
+      <p>The blockers are execution failures, not documentation gaps. An interactive command that permanently hangs headless sessions (<code>git add -p</code>), a multi-writer race on the state file (spec-verifier), and a tmux injection that corrupts shell state (co-conductor restart) will each independently stop a real run. Fix any one and the others remain.</p>
+      <p>The Expansionist's vision — franchised AI factory, publishable architecture — is downstream of a system that can complete one feature end-to-end. That test has not been run. Run it first.</p>
+    </div>
+  </div>
+
+  <div class="verdict-card one-thing">
+    <div class="card-header">⚡ The One Thing to Do First</div>
+    <div class="card-body">
+      <p><strong>Verify the CLI invocation works.</strong> Open a terminal and run:</p>
+      <pre>claude --print --agent /path/to/AIBuilder/.claude/agents/dev-spec-author.md "test"</pre>
+      <p><strong>If it errors:</strong> The entire dispatch architecture needs to be redesigned. Find what flag combination works for headless agent invocation and rebuild everything around that.</p>
+      <p><strong>If it succeeds:</strong> Confirmed. Then fix in this order: (1) replace <code>git add -p</code> with <code>git add -A</code> in dev-deployer.md, (2) remove STATUS.md write from dev-spec-verifier.md, (3) escape the co-conductor STATUS.md tmux injection, (4) export env vars in the sub-agent dispatch block. Then run one feature, live, on a throwaway repo.</p>
+      <p>Everything else is conjecture until that command returns a result.</p>
+    </div>
+  </div>
+
+  <!-- Complete confirmed issue list -->
+  <div style="margin-top: 28px;">
+    <div style="font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Complete Issue List from This Council</div>
+    <div class="verdict-card">
+      <div class="card-body" style="padding: 16px 24px;">
+        <ul class="bug-list">
+          <li><span class="badge badge-fatal">UNVERIFIED</span> <code>claude --print --agent &lt;file&gt;</code> may not be valid — load-bearing assumption never tested</li>
+          <li><span class="badge badge-confirmed">CONFIRMED</span> <code>git add -p</code> in dev-deployer.md — interactive TUI, blocks all headless deploys</li>
+          <li><span class="badge badge-confirmed">CONFIRMED</span> dev-spec-verifier.md writes STATUS.md directly — single-writer violation, race condition</li>
+          <li><span class="badge badge-confirmed">CONFIRMED</span> Co-conductor restart injects raw STATUS.md via tmux send-keys — shell corruption on newlines</li>
+          <li><span class="badge badge-high">HIGH</span> Env vars (PROJECT_DIR etc.) not exported to sub-agent tmux sessions</li>
+          <li><span class="badge badge-open">OPEN</span> dev-auditor.md says "Best CLI: Gemini 2.5 Pro" — no Gemini dispatch path in Conductor</li>
+          <li><span class="badge badge-open">OPEN</span> Idempotency — devloop-start.sh on mid-flight project: resume or overwrite?</li>
+          <li><span class="badge badge-open">OPEN</span> Silent failure indistinguishable from normal operation — no ops alerting for stuck agents</li>
+          <li><span class="badge badge-open">OPEN</span> System has never been run end-to-end — no empirical ground truth</li>
+          <li><span class="badge badge-wrong">WRONG</span> FEATURES.md format mismatch (Executor claim) — devloop-start.sh handles both variants, confirmed by file read</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collapsible advisor responses -->
+  <div style="margin-top: 28px; margin-bottom: 10px; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Full Advisor Responses</div>
+
+  <details>
+    <summary><span class="advisor-label label-c">The Contrarian</span> &nbsp;Read files — 5 confirmed bugs</summary>
+    <div class="advisor-content">
+      <p><strong>1.</strong> <code>--agent</code> doesn't accept file paths — takes registered agent names. Dispatch passes /tmp throwaway paths. Every sub-agent dispatch broken.</p>
+      <p><strong>2.</strong> Co-conductor injects STATUS.md verbatim into tmux send-keys. Newlines → Enter. Shell state corrupted.</p>
+      <p><strong>3.</strong> dev-spec-verifier.md writes STATUS.md directly (lines 96–97). Single-writer violation. Race condition guaranteed.</p>
+      <p><strong>4.</strong> dev-deployer.md uses <code>git add -p</code> — interactive TUI. Blocks headless session permanently. Pipeline never deploys.</p>
+      <p><strong>5.</strong> dev-auditor.md says "Best CLI: Gemini 2.5 Pro" but Conductor has no Gemini dispatch path.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-label label-fp">First Principles</span> &nbsp;Verify CLI before all else</summary>
+    <div class="advisor-content">
+      <p>CLI invocation <code>claude --print --agent &lt;file&gt;</code> is unverified. If it doesn't work, the pipeline is a no-op dressed in scaffolding.</p>
+      <p>Environment not inherited across tmux sessions. API keys, PATH, working dirs don't propagate automatically.</p>
+      <p>State machine has no stuck-feature timeout. Silent sub-agent failure leaves feature in its current stage forever. Watchdog catches conductor death, not this.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-label label-ex">Expansionist</span> &nbsp;Answered a different question (unanimously dismissed)</summary>
+    <div class="advisor-content">
+      <p>The public repo is the starting gun for an AI-native software factory. Inception phase = standalone enterprise product. Cross-model verification = publishable architecture. Ship BidPlatform publicly. DECISIONS.md = training corpus.</p>
+      <p><em>Note: All 5 peer reviewers identified this as the biggest blind spot — the advisor answered a product strategy question, not a readiness question. Zero blockers identified.</em></p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-label label-out">The Outsider</span> &nbsp;Onboarding completely broken for new users</summary>
+    <div class="advisor-content">
+      <p>No claude CLI install guide — user hits "command not found" with nowhere to go.</p>
+      <p>openclaw listed as optional but completely unexplained — package? script? paid service?</p>
+      <p>No mental model for interactive (BA agent) vs headless (all other agents) mode — users don't know when they're talking to something vs watching it.</p>
+      <p>Unclear what "project directory" means — same as code? separate? Session naming not documented.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="advisor-label label-exec">The Executor</span> &nbsp;4 ordered blockers (1 was wrong)</summary>
+    <div class="advisor-content">
+      <p><strong>Blocker 1:</strong> <code>--print --agent</code> flag combo unverified.</p>
+      <p><strong>Blocker 2:</strong> Env vars not exported — fix: prepend <code>export PROJECT_DIR='...' &&</code> before claude call.</p>
+      <p><strong>Blocker 3 (WRONG):</strong> FEATURES.md format mismatch claimed — Reviewer 4 confirmed devloop-start.sh handles both formats at lines 74-80. Bug doesn't exist.</p>
+      <p><strong>Blocker 4:</strong> Cron fires into dead tmux after machine sleep — silently succeeds, conductor never ticks.</p>
+    </div>
+  </details>
+
+  <!-- Peer review table -->
+  <div style="margin-top: 28px; margin-bottom: 10px; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Peer Review Summary</div>
+  <div class="verdict-card">
+    <div class="card-body" style="padding: 0;">
+      <table>
+        <thead>
+          <tr>
+            <th>Reviewer</th>
+            <th>Strongest</th>
+            <th>Blind Spot</th>
+            <th>All Missed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>A (file-grounded bugs)</td><td>C (wrong question)</td><td>Idempotency on restart</td></tr>
+          <tr><td>2</td><td>A (verifiable)</td><td>C (non-answer)</td><td>No ops alerting for silent stalls</td></tr>
+          <tr><td>3</td><td>A</td><td>C</td><td>Never been run end-to-end</td></tr>
+          <tr><td>4 (read files)</td><td>A (confirmed)</td><td>E invented a bug</td><td>Co-conductor tmux injection (confirmed A's bug)</td></tr>
+          <tr><td>5</td><td>A</td><td>A missed priority order</td><td>System never run — empirical unknown</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  Council #5 &nbsp;·&nbsp; 2026-05-05 &nbsp;·&nbsp; AIBuilder Readiness Audit<br>
+  5 advisors · 5 peer reviews · Chairman synthesis · Transcript: council-transcript-20260505.md
+</div>
+
+</body>
+</html>
