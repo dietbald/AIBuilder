@@ -87,7 +87,7 @@ tmux new-session -d -s "agent-dev-spec-author-F-01-BidPlatform"
 tmux has-session -t "=agent-dev-spec-author-F-01-BidPlatform" 2>/dev/null && echo "EXACT MATCH OK"
 # Should NOT match (partial):
 tmux has-session -t "=agent-dev-spec-author-F-01" 2>/dev/null && echo "PARTIAL MATCH (BAD)" || echo "NO PARTIAL MATCH OK"
-tmux kill-session -t "agent-dev-spec-author-F-01-BidPlatform"
+tmux kill-session -t "=agent-dev-spec-author-F-01-BidPlatform"
 ```
 
 **Pass criteria:** First check prints `EXACT MATCH OK`. Second check prints `NO PARTIAL MATCH OK`.

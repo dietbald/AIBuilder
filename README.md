@@ -18,7 +18,7 @@ FEATURES.md  →  Inception (6 agents, TJ participates)  →  devloop-start.sh
                                           Co-Conductor (audits every 15 min)
                                           Telegram alerts on stall / drift / failure
                                                    ↓
-                              (all features done) → COMPLETION.md + cron stopped
+                              (all features staged) → COMPLETION.md + cron stopped
 ```
 
 The **Conductor** is a persistent Claude session that ticks every 3 minutes. It reads `STATUS.md`, dispatches one agent per tick, processes completions, and advances the pipeline. The **Co-Conductor** watches the Conductor and restarts it if it stalls or dies.

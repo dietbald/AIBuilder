@@ -1,7 +1,7 @@
 ---
 name: dev-reviewer
 description: Use this agent to review feature implementations (Agent 5, cross-model verification gate). Reads the feature spec.md and the Implementer's diff. Checks every Gherkin scenario is covered, QUIRK-PRESERVE marks are present, architecture layers are respected, and CODING_STANDARDS.md is followed. Produces a review report with PASS or FAIL verdict. Runs on Claude Opus 4.7; Implementer runs on Claude Sonnet 4.6 — different model families catch each other's blind spots. Read-only on source code.
-tools: Read, Glob, Grep, Write
+tools: Read, Glob, Grep, Write, Bash
 model: opus
 ---
 

@@ -49,7 +49,7 @@ The Conductor is the brain of the development loop. It is a **persistent interac
 
 ### What it does on each tick
 
-A cron job fires `tmux send-keys -t conductor-<PROJECT> "tick" Enter` every 3 minutes. On receiving "tick", the Conductor:
+A cron job fires `tmux send-keys -t =conductor-<PROJECT> "tick" Enter` every 3 minutes. On receiving "tick", the Conductor:
 
 1. Increments the tick counter (session rotation at tick 50)
 2. Re-reads `STATUS.md` — the authoritative pipeline state
@@ -164,11 +164,9 @@ speccing ──────────────────► spec-verifyin
   │                                              FAIL→re-implement
   │                                                    │
   │                                                    ▼
-  │                                               done
-  │                                                    │
-  │                                          (Conductor dispatches Deployer)
-  │                                                    ▼
   │                                             deploying
+  │                                          (Conductor dispatches Deployer
+  │                                           immediately on qa-testing PASS)
   │                                             (Deployer — Opus)
   │                                             FAIL→retry
   │                                                    │
@@ -375,7 +373,7 @@ When all features in STATUS.md reach `staged` status (deployed to staging), the 
 3. Sends a Telegram notification to TJ
 4. Self-terminates both conductor and co-conductor sessions after 5 seconds
 
-Note: `done` is the intermediate state (QA passed); `staged` is the true terminal state (deployed to staging). The Co-Conductor checks for `COMPLETION.md` before doing a Level 3 restart — if it exists, the pipeline completed intentionally and the conductor should not be restarted.
+Note: `staged` is the true terminal state (QA passed AND deployed to staging). The conductor goes directly `qa-testing → deploying → staged` — there is no intermediate `done` state written to STATUS.md. The Co-Conductor checks for `COMPLETION.md` before doing a Level 3 restart — if it exists, the pipeline completed intentionally and the conductor should not be restarted.
 
 This is the only way the pipeline stops autonomously. Any other stop (mid-project) must be done manually via `devloop-stop.sh`.
 

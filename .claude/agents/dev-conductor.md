@@ -35,8 +35,8 @@ All file paths are relative to `$PROJECT_DIR`. All agent files are under `$AIBUI
 
 ### Step 1: Process completions
 
-For each feature currently in an active state (`speccing`, `implementing`, `test-authoring`, `reviewing`, `qa-testing`, `deploying`):
-Note: `review-failed` is an unconditional transition (no agent output to poll) — it is handled in Step 4 directly.
+For each feature currently in an active state (`speccing`, `spec-verifying`, `implementing`, `test-authoring`, `reviewing`, `qa-testing`, `deploying`):
+Note: `review-failed` and `spec-approved` are unconditional transitions (no agent output to poll) — handled in Step 4 directly.
 
 ```bash
 OUTPUT="/tmp/devloop-out-${ROLE}-${FEATURE}.txt"
@@ -89,11 +89,14 @@ For each available slot:
 
 > **Retry key scoping for review/QA re-dispatches:** When re-dispatching the Implementer as a result of a Reviewer or QA Tester failure, use a scoped retry key so the review-retry budget is separate from the implementation-stage budget. A feature that hit two implementing failures should still get two review-retry attempts before Tier 4 escalation.
 > ```bash
+> # Spec-author retries:             RETRY_KEY="${FEATURE}:dev-spec-author"
+> # Spec-verifier retries:           RETRY_KEY="${FEATURE}:dev-spec-verifier"
 > # Implementation stage retries:   RETRY_KEY="${FEATURE}:dev-implementer"
 > # Review-failure re-dispatch:      RETRY_KEY="${FEATURE}:dev-implementer:review-retry"
 > # QA-failure re-dispatch:          RETRY_KEY="${FEATURE}:dev-implementer:qa-retry"
 > # Test-author retries:             RETRY_KEY="${FEATURE}:dev-test-author"
 > # Deployer retries:                RETRY_KEY="${FEATURE}:dev-deployer"
+> # Rate-limit backoff (any role):   RETRY_KEY="${FEATURE}:${ROLE}:rate-limit"
 > ```
 
 ### Step 5: Check for completion or log idle
@@ -227,7 +230,15 @@ MAX_RETRIES=2
 RETRY_COUNT=$(grep "^${RETRY_KEY}=" "$RL_FILE" 2>/dev/null | cut -d= -f2)
 RETRY_COUNT=${RETRY_COUNT:-0}
 
-if [ "$VERDICT" = "FAIL" ]; then
+# Reviewer and QA-tester FAIL verdicts mean "found bugs" — that is correct behaviour,
+# not a failure to do their job. Do not consume their retry budget on a correct FAIL.
+# Only timeout/crash (handled by the watchdog) should increment their retry counter.
+SKIP_RETRY_COUNT=0
+case "$ROLE" in
+  dev-reviewer|dev-qa-tester) SKIP_RETRY_COUNT=1 ;;
+esac
+
+if [ "$VERDICT" = "FAIL" ] && [ "$SKIP_RETRY_COUNT" -eq 0 ]; then
   NEW_COUNT=$(( RETRY_COUNT + 1 ))
   grep -v "^${RETRY_KEY}=" "$RL_FILE" > "${RL_FILE}.tmp"
   echo "${RETRY_KEY}=${NEW_COUNT}" >> "${RL_FILE}.tmp"
@@ -303,7 +314,7 @@ On every tick (step 3), check for agents that have been running >30 minutes with
 ```bash
 DISPATCH_DIR="$PROJECT_DIR/.devloop/agent-dispatch"
 NOW=$(date +%s)
-TIMEOUT_SECS=1800  # 30 minutes
+TIMEOUT_SECS=1800  # 30 minutes default
 MAX_RETRIES=2
 
 for DISPATCH_FILE in "$DISPATCH_DIR"/*.time; do
@@ -325,6 +336,14 @@ for DISPATCH_FILE in "$DISPATCH_DIR"/*.time; do
   ROLE=$(echo "$AGENT_KEY" | sed "s/-${FEATURE}\$//")
   AGENT_SESSION="agent-${ROLE}-${FEATURE}-${PROJECT_NAME}"
 
+  # Role-specific timeout overrides.
+  # Deployer runs gh pr checks --watch which blocks until CI finishes (can take 30-60 min).
+  # The default 30-min watchdog would kill a working deployer on every slow CI run.
+  ROLE_TIMEOUT_SECS=$TIMEOUT_SECS
+  case "$ROLE" in
+    dev-deployer) ROLE_TIMEOUT_SECS=3600 ;;  # 1 hour for CI wait
+  esac
+
   # Detect crashed sessions: session dead + no output + >60s grace period
   # (60s grace avoids false positives on sessions that haven't started yet)
   SESSION_ALIVE=1
@@ -332,7 +351,7 @@ for DISPATCH_FILE in "$DISPATCH_DIR"/*.time; do
 
   SHOULD_KILL=0
   KILL_REASON=""
-  if [ "$ELAPSED" -gt "$TIMEOUT_SECS" ]; then
+  if [ "$ELAPSED" -gt "$ROLE_TIMEOUT_SECS" ]; then
     SHOULD_KILL=1
     KILL_REASON="TIMEOUT after ${ELAPSED}s"
   elif [ "$SESSION_ALIVE" -eq 0 ] && [ "$ELAPSED" -gt 60 ]; then
@@ -360,8 +379,27 @@ for DISPATCH_FILE in "$DISPATCH_DIR"/*.time; do
       REASON="${KILL_REASON} — ${NEW_COUNT} times — retry ceiling exceeded"
       # Use Tier 4 escalation block above
     else
-      echo "${KILL_REASON} — ${ROLE}/${FEATURE} (attempt ${NEW_COUNT}/${MAX_RETRIES}). Will re-dispatch on next eligible tick."
-      # STATUS.md entry for this feature remains in its current active state — re-dispatch will happen next tick
+      # Re-dispatch immediately — do NOT rely on the LLM noticing a stale active-state feature
+      # on the next tick. Without an explicit re-dispatch here, the feature stays in its
+      # active state with no agent session and no dispatch file, and Step 4 has no rule for
+      # "active state, no agent, no output" → it stalls indefinitely.
+      log_event "$FEATURE" "$ROLE" "retry" "attempt=${NEW_COUNT}/${MAX_RETRIES} reason=${KILL_REASON}"
+      # Call the dispatch block for this FEATURE/ROLE. The rm -f output + new session
+      # creation below is the same pattern as the main dispatch block.
+      OUTPUT="/tmp/devloop-out-${ROLE}-${FEATURE}.txt"
+      rm -f "$OUTPUT"
+      CONTEXT="Feature: $FEATURE. Output file: $OUTPUT. Project dir: $PROJECT_DIR. Previous attempt: ${KILL_REASON} (retry ${NEW_COUNT}/${MAX_RETRIES})."
+      case "$ROLE" in
+        dev-implementer|dev-test-author) AGENT_MODEL="claude-sonnet-4-6" ;;
+        *) AGENT_MODEL="claude-opus-4-7" ;;
+      esac
+      tmux new-session -d -s "$AGENT_SESSION" -x 220 -y 50
+      tmux send-keys -t "=$AGENT_SESSION" \
+        "export PROJECT_DIR='$PROJECT_DIR' AIBUILDER_DIR='$AIBUILDER_DIR' PROJECT_NAME='$PROJECT_NAME' && cd '$PROJECT_DIR' && claude --model $AGENT_MODEL --print --dangerously-skip-permissions --agent '$ROLE' '$CONTEXT' < /dev/null > '$OUTPUT' 2>&1; echo EXIT_CODE=\$?" \
+        Enter
+      echo "$(date +%s)" > "$PROJECT_DIR/.devloop/agent-dispatch/${ROLE}-${FEATURE}.time"
+      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] RETRY DISPATCHED — ${ROLE}/${FEATURE} (attempt ${NEW_COUNT}/${MAX_RETRIES})" \
+        >> "$PROJECT_DIR/05-progress/conductor-log.md"
     fi
   fi
 done

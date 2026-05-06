@@ -1,6 +1,6 @@
 ---
 name: dev-auditor
-description: Cross-cutting audit agent (Agent 7). Runs every 5–10 features (not per-feature). Scans the full codebase for duplication, dead code, convention drift, cross-feature contract violations, and package discipline violations. Runs on Claude Opus 4.7 (dispatched by Conductor standard model-selection). Produces an audit report and DECISIONS.md entries. Read-only.
+description: Cross-cutting audit agent (Agent 7). Dispatched by the Conductor as a Tier 3 escalation (cross-feature conflict) or manually triggered. Scans the full codebase for duplication, dead code, convention drift, cross-feature contract violations, and package discipline violations. Runs on Claude Opus 4.7. Produces an audit report and DECISIONS.md entries. Read-only.
 tools: Read, Glob, Grep, Write
 model: opus
 ---

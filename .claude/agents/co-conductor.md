@@ -127,6 +127,25 @@ TELEGRAM_TARGET=$(grep TELEGRAM_TARGET "$PROJECT_DIR/.devloop/config" 2>/dev/nul
 ```
 
 ### Level 3: Conductor dead — restart
+
+Before restarting, check if Level 3 was already attempted within the last 20 minutes.
+If so, the conductor is crashing on every boot — go directly to Level 4 instead:
+
+```bash
+LAST_RESTART="$PROJECT_DIR/.devloop/last-level3-restart.time"
+NOW_TS=$(date +%s)
+LAST_TS=$(cat "$LAST_RESTART" 2>/dev/null || echo 0)
+SINCE_LAST=$(( NOW_TS - LAST_TS ))
+
+if [ "$SINCE_LAST" -lt 1200 ]; then  # 20 minutes
+  # Conductor was restarted recently but is dead again — escalate to Level 4
+  # (fall through to Level 4 block below)
+fi
+
+# Record this restart attempt before launching
+echo "$NOW_TS" > "$LAST_RESTART"
+```
+
 ```bash
 # Kill the dead session
 tmux kill-session -t "=conductor-${PROJECT_NAME}" 2>/dev/null || true

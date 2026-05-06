@@ -48,7 +48,7 @@ Read `CODING_STANDARDS.md` for the full architecture patterns. Follow them exact
 
 ## Self-Review Before Handing Off
 
-Before marking the feature as `review-pending`:
+Before outputting `verdict: PASS` (which hands off to the Test Author):
 
 ```bash
 # These must all pass — adjust commands per CODING_STANDARDS.md
