@@ -139,11 +139,12 @@ bash /path/to/AIBuilder/scripts/devloop-start.sh /path/to/your/project
 
 This script:
 1. Verifies `AGENTS.md` and `FEATURES.md` exist
-2. Creates required directories (`02-specs/`, `05-progress/`, `.devloop/`)
-3. Initializes `STATUS.md` if missing
-4. Launches `conductor-<PROJECT>` tmux session (interactive Claude)
-5. Launches `coconductor-<PROJECT>` tmux session (interactive Claude)
-6. Installs two cron jobs: conductor ticked every 3 min, co-conductor audited every 15 min
+2. Installs agent symlinks to `~/.claude/agents/` (required for `--agent <name>` resolution)
+3. Creates required directories (`02-specs/`, `05-progress/`, `05-progress/qa-reports/`, `.devloop/`, `.devloop/agent-dispatch/`)
+4. Initializes `STATUS.md` if missing
+5. Launches `conductor-<PROJECT>` tmux session (interactive Claude)
+6. Launches `coconductor-<PROJECT>` tmux session (interactive Claude)
+7. Installs two cron jobs: conductor ticked every 3 min, co-conductor audited every 15 min
 
 **Example:**
 
@@ -256,7 +257,7 @@ Telegram alerts mean the system has hit something it cannot resolve autonomously
 - **Persistent rate limit** — quota exhausted; wait or upgrade
 - **Expired API key** — re-authenticate and relaunch
 - **Git push failure** — re-authenticate with `gh auth login`
-- **Retry ceiling exceeded** — agent failed 2× with notes; your judgment needed on whether to rewrite the spec, override the verifier, or decompose the feature
+- **Retry ceiling exceeded** — agent failed 3 total times (original attempt + 2 retries) with notes; your judgment needed on whether to rewrite the spec, override the verifier, or decompose the feature
 
 After fixing, restart:
 ```bash
@@ -317,7 +318,7 @@ See `STRESS_TESTS.md` for the full list.
 | `05-progress/DECISIONS.md` | Conductor | All Tier 1–3 resolution decisions |
 | `02-specs/<feature>/spec.md` | Spec Author | The contract each feature is built against |
 | `.devloop/co-conductor.log` | Co-Conductor | Audit log |
-| `.devloop/co-conductor-alert.md` | Co-Conductor | Written when Tier 4 escalation happens |
+| `.devloop/co-conductor-alert.md` | Co-Conductor | Written when Co-Conductor Level 4 fires (Conductor cannot be auto-recovered — distinct from Conductor Tier 4 escalation) |
 | `.devloop/tick-count` | Conductor | Current tick number (resets at 50) |
 | `.devloop/agent-dispatch/*.time` | Conductor | Dispatch timestamps for timeout watchdog |
 | `/tmp/devloop-out-<role>-<feature>.txt` | Agents | Agent output (read by Conductor after completion) |

@@ -41,8 +41,10 @@ cat "$PROJECT_DIR/.devloop/status-snapshot.md" 2>/dev/null || echo "[first run �
 # 3. Original goals
 cat "$PROJECT_DIR/FEATURES.md"
 
-# 4. Is the conductor session alive?
-tmux has-session -t "conductor-${PROJECT_NAME}" 2>/dev/null && echo "ALIVE" || echo "DEAD"
+# 4. Is the conductor session alive? (= prefix is required for exact-match — without it,
+#    tmux matches any session whose name starts with "conductor-<PROJECT>", which causes
+#    false positives when e.g. a stale "conductor-BidPlatform2" session exists)
+tmux has-session -t "=conductor-${PROJECT_NAME}" 2>/dev/null && echo "ALIVE" || echo "DEAD"
 
 # 5. What is the conductor currently showing?
 tmux capture-pane -t "conductor-${PROJECT_NAME}" -p 2>/dev/null | tail -30 || echo "[cannot capture conductor pane]"
@@ -56,7 +58,9 @@ tmux list-sessions -F '#{session_name}' 2>/dev/null | grep "^agent-.*-${PROJECT_
 ### Check 1: Liveness
 Is `conductor-${PROJECT_NAME}` session alive?
 - YES → Check 2
-- NO → **Action Level 3 (restart)**
+- NO → Check if `$PROJECT_DIR/COMPLETION.md` exists first (conductor self-terminates intentionally on pipeline completion — do NOT restart it in that case)
+  - `COMPLETION.md` exists → **Action Level 0** — pipeline finished, send one final Telegram if not already sent, then stop auditing
+  - `COMPLETION.md` does not exist → **Action Level 3 (restart)**
 
 ### Check 2: Progress
 Compare current STATUS.md to `.devloop/status-snapshot.md`.

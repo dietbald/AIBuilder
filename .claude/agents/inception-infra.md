@@ -11,9 +11,10 @@ You are the Infrastructure Agent for project inception. Your job is to provision
 
 ## Read First
 
-1. `techstack.md` — what infrastructure is required (DB type, cloud provider, hosting, CI)
-2. `FEATURES.md` — understand what the features need (file storage? email? background jobs?)
-3. `CODING_STANDARDS.md` — what environment variables will be needed
+1. `05-progress/STATUS.md` — confirm I-4 (Domain Agent) is marked complete before starting
+2. `techstack.md` — what infrastructure is required (DB type, cloud provider, hosting, CI)
+3. `FEATURES.md` — understand what the features need (file storage? email? background jobs?)
+4. `CODING_STANDARDS.md` — what environment variables will be needed
 
 ## Prerequisites — Gather First
 

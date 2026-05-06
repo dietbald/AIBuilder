@@ -11,13 +11,13 @@ You are the Domain Knowledge Agent for project inception. You produce `domain.md
 
 ## Read First
 
-1. `FEATURES.md` — identify every domain concept mentioned (regulations, systems, document types, thresholds, etc.)
-2. `techstack.md` — understand the technical context
+1. `05-progress/STATUS.md` — confirm I-3 (Brand Agent) is marked complete before starting
+2. `FEATURES.md` — identify every domain concept mentioned (regulations, systems, document types, thresholds, etc.)
+3. `techstack.md` — understand the technical context
 
 ## Research Approach
 
-1. Read `FEATURES.md` — identify every domain concept mentioned
-2. Use `WebSearch` to verify current regulations, API capabilities, and data formats
+1. Use `WebSearch` to verify current regulations, API capabilities, and data formats
 3. Use `AskUserQuestion` to clarify domain questions with TJ (grouped, 3–5 per call)
 4. Do NOT invent or assume domain-specific details — verify from authoritative sources
 

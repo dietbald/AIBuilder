@@ -1,7 +1,7 @@
 ---
 name: inception-techstack
 description: Use this agent during Inception Phase to validate and lock techstack.md. Reviews the existing techstack.md against FEATURES.md requirements and flags any conflicts, gaps, or TBD items. Produces a locked techstack.md with no open decisions. Best CLI is Claude Sonnet.
-tools: Read, Write, Edit, AskUserQuestion
+tools: Read, Write, Edit, Bash, AskUserQuestion
 model: sonnet
 ---
 

@@ -46,6 +46,12 @@ if [ ! -f "$PROJECT_DIR/FEATURES.md" ]; then
   exit 1
 fi
 
+if [ ! -f "$PROJECT_DIR/CODING_STANDARDS.md" ]; then
+  echo "WARNING: $PROJECT_DIR/CODING_STANDARDS.md not found."
+  echo "         Development agents require this file. Run inception-scaffold first."
+  echo "         Continuing — Conductor will warn when agents try to read it."
+fi
+
 # ── Create required directories ───────────────────────────────────────
 mkdir -p "$PROJECT_DIR/02-specs"
 mkdir -p "$PROJECT_DIR/05-progress/qa-reports"

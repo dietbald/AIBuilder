@@ -75,10 +75,12 @@ For each available slot:
 | `spec-approved` | — | `implementing` | dispatch `dev-implementer` |
 | `implementing` | output has `verdict: PASS` | `test-authoring` | dispatch `dev-test-author` |
 | `test-authoring` | output has `verdict: PASS` | `reviewing` | dispatch `dev-reviewer` |
+| `spec-verifying` | output has `verdict: FAIL` | `speccing` | re-dispatch `dev-spec-author` with rejection notes from verifier report |
 | `reviewing` | output has `verdict: PASS` | `qa-testing` | dispatch `dev-qa-tester` |
-| `qa-testing` | output has `verdict: PASS` | `done` | update STATUS.md |
+| `reviewing` | output has `verdict: FAIL` | `review-failed` | update STATUS.md; **use retry key `${FEATURE}:dev-implementer:review-retry`** on next tick |
+| `qa-testing` | output has `verdict: PASS` | `staged` | dispatch `dev-deployer`; update STATUS.md |
 | `qa-testing` | output has `verdict: FAIL` | `implementing` | re-dispatch implementer with QA notes; **use retry key `${FEATURE}:dev-implementer:qa-retry`** |
-| `review-failed` | — | `implementing` | treat same as reviewing FAIL — re-dispatch implementer with notes; **use retry key `${FEATURE}:dev-implementer:review-retry`** |
+| `review-failed` | — | `implementing` | re-dispatch implementer with notes; **use retry key `${FEATURE}:dev-implementer:review-retry`** |
 
 > **Retry key scoping for review/QA re-dispatches:** When re-dispatching the Implementer as a result of a Reviewer or QA Tester failure, use a scoped retry key so the review-retry budget is separate from the implementation-stage budget. A feature that hit two implementing failures should still get two review-retry attempts before Tier 4 escalation.
 > ```bash
@@ -90,9 +92,11 @@ For each available slot:
 ### Step 5: Check for completion or log idle
 
 ```bash
-# Count total features and done features
+# Count total features and terminal-state features.
+# Terminal states: staged (deployed to staging) — the true end state of the pipeline.
+# done is kept as the QA-passed state; staged means deployer also ran successfully.
 TOTAL=$(grep -c '| F-' "$PROJECT_DIR/05-progress/STATUS.md" 2>/dev/null || echo 0)
-DONE=$(grep -cE '\| done \|' "$PROJECT_DIR/05-progress/STATUS.md" 2>/dev/null || echo 0)
+DONE=$(grep -cE '\| (staged|done) \|' "$PROJECT_DIR/05-progress/STATUS.md" 2>/dev/null || echo 0)
 
 if [ "$TOTAL" -gt 0 ] && [ "$TOTAL" = "$DONE" ]; then
   # All features complete — stop the pipeline
@@ -145,6 +149,11 @@ esac
 # ~/.claude/agents/<name>.md file (installed by devloop-start.sh symlinks).
 # --agent takes a NAME, not a file path.
 CONTEXT="Feature: $FEATURE. Output file: $OUTPUT. Project dir: $PROJECT_DIR."
+
+# Clear previous output before dispatching. Without this, if the conductor checks for
+# ---DEVLOOP_DONE--- on the next tick, it finds the OLD output file (from a previous
+# attempt) and reads a stale PASS/FAIL verdict — the new agent may not have written yet.
+rm -f "$OUTPUT"
 
 # Kill any leftover session from a previous attempt
 tmux kill-session -t "=$AGENT_SESSION" 2>/dev/null || true
@@ -302,8 +311,11 @@ for DISPATCH_FILE in "$DISPATCH_DIR"/*.time; do
 
   DISPATCH_TIME=$(cat "$DISPATCH_FILE")
   ELAPSED=$(( NOW - DISPATCH_TIME ))
-  FEATURE=$(echo "$AGENT_KEY" | grep -oE 'F-[0-9]+')
-  ROLE=$(echo "$AGENT_KEY" | sed 's/-F-[0-9]*$//')
+  # Extract ROLE and FEATURE from key like "dev-spec-author-F-01-user-auth".
+  # FEATURE must capture the full slug (F-01-user-auth), not just the numeric prefix (F-01),
+  # otherwise the session name and output file path built below won't match the originals.
+  FEATURE=$(echo "$AGENT_KEY" | grep -oE 'F-[0-9]+(-[a-z0-9]+)*')
+  ROLE=$(echo "$AGENT_KEY" | sed "s/-${FEATURE}\$//")
   AGENT_SESSION="agent-${ROLE}-${FEATURE}-${PROJECT_NAME}"
 
   # Detect crashed sessions: session dead + no output + >60s grace period
@@ -432,7 +444,7 @@ Apply the same principle before dispatching the Reviewer (verify implementation 
 
 ## Hard Rules
 
-1. **One action per tick.** Never stack multiple dispatches in one tick.
+1. **One dispatch per tick.** Process all completions (Step 1) and check all blockers (Step 2) before dispatching — these are housekeeping, not "actions." The single-action constraint means: dispatch at most ONE new agent per tick. Reading output, updating STATUS.md, and logging are not constrained — only new sub-agent dispatches.
 2. **Re-read STATUS.md every tick.** Never act on remembered state alone — files are truth.
 3. **No double-dispatch.** Before dispatching, check if `agent-${ROLE}-${FEATURE}-${PROJECT_NAME}` session already exists: `tmux has-session -t "=$AGENT_SESSION" 2>/dev/null && echo "already running"`. The `=` prefix forces exact-match — required to prevent partial-name false positives (tmux 3.x+).
 4. **Document everything.** Every Tier 1–3 resolution goes in DECISIONS.md.

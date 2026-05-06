@@ -41,13 +41,12 @@ tail -20 <project-dir>/.devloop/co-conductor.log
 ### Persistent rate limit (quota exhausted)
 
 ```bash
-# Check which provider hit the limit (Claude / Gemini / Codex)
-grep -i '429\|rate.limit' /tmp/devloop-out-<role>-<feature>.txt
+# Check the rate limit error in the agent output file
+grep -i '429\|rate.limit\|overloaded' /tmp/devloop-out-<role>-<feature>.txt
 
 # Options:
-# A) Wait — most rate limits reset hourly or daily
-# B) Upgrade plan quota for the affected provider
-# C) If it's Codex: check RunPod pod status (runpod-codex status)
+# A) Wait — Claude rate limits reset hourly or daily
+# B) Upgrade Anthropic plan quota
 
 # Clear the rate-limit counter for this agent so it gets 3 fresh backoffs
 grep -v "^F-XX:<role>:rate-limit=" <project-dir>/05-progress/RETRIES.md \
@@ -63,14 +62,13 @@ grep -v "^F-XX:<role>:rate-limit=" <project-dir>/05-progress/RETRIES.md \
 # Identify which key is failing from the output file
 grep -i 'auth\|unauthorized\|invalid.key\|403' /tmp/devloop-out-<role>-<feature>.txt
 
-# Fix: update the key in your shell environment or .env file
-# For Claude: ANTHROPIC_API_KEY
-# For Gemini: GEMINI_API_KEY (or GOOGLE_API_KEY)
-# For Codex:  OPENAI_API_KEY
+# Fix: update the Anthropic API key in your shell environment or .env file
+# ANTHROPIC_API_KEY
 
 # Verify the new key works before relaunching:
 curl -s -o /dev/null -w "%{http_code}" \
-  -H "Authorization: Bearer $ANTHROPIC_API_KEY" \
+  -H "x-api-key: $ANTHROPIC_API_KEY" \
+  -H "anthropic-version: 2023-06-01" \
   https://api.anthropic.com/v1/models
 # Should return 200
 ```
@@ -80,8 +78,9 @@ curl -s -o /dev/null -w "%{http_code}" \
 ### Git push failure
 
 ```bash
-# Read the git error from the output file
-tail -20 /tmp/devloop-out-conductor-*.txt | grep -i 'git\|push\|auth\|reject'
+# Read the git error from the output file (deployer output, not conductor — conductor is a
+# persistent session and does not write to /tmp/devloop-out-*.txt)
+tail -20 /tmp/devloop-out-dev-deployer-F-*.txt | grep -i 'git\|push\|auth\|reject'
 
 # Common fixes:
 # Auth failure   → gh auth login  (re-authenticate with GitHub CLI)
@@ -97,7 +96,7 @@ git -C <project-dir> log --oneline -5
 
 ### Retry ceiling exceeded (semantic failure)
 
-This means the agent failed 2 times with notes injected, and still couldn't pass the verifier. This needs your judgment.
+This means the agent failed 3 total times (original attempt + 2 retries) with notes injected, and still couldn't pass the verifier. This needs your judgment.
 
 ```bash
 # Read the last failure notes
@@ -133,10 +132,12 @@ STATUS.md records where the pipeline stopped. The Conductor reads it on startup 
 bash <aibuilder-dir>/scripts/devloop-start.sh <project-dir>
 ```
 
-If the tmux session still exists from the previous run, kill it first:
+If the tmux sessions still exist from the previous run, kill them first:
 
 ```bash
-tmux kill-session -t devloop-<project-name> 2>/dev/null || true
+PROJECT_NAME=$(basename <project-dir>)
+tmux kill-session -t "=conductor-${PROJECT_NAME}"   2>/dev/null || true
+tmux kill-session -t "=coconductor-${PROJECT_NAME}" 2>/dev/null || true
 bash <aibuilder-dir>/scripts/devloop-start.sh <project-dir>
 ```
 
@@ -165,11 +166,15 @@ PROJECT_NAME=$(basename <project-dir>)
 AIBUILDER_DIR=<aibuilder-dir>
 COCONDUCTOR_AGENT="$AIBUILDER_DIR/.claude/agents/co-conductor.md"
 
-tmux kill-session -t "coconductor-${PROJECT_NAME}" 2>/dev/null || true
-tmux new-session -d -s "coconductor-${PROJECT_NAME}"
-tmux send-keys -t "coconductor-${PROJECT_NAME}" \
-  "export PROJECT_DIR='<project-dir>' AIBUILDER_DIR='$AIBUILDER_DIR' PROJECT_NAME='$PROJECT_NAME'" Enter
+tmux kill-session -t "=coconductor-${PROJECT_NAME}" 2>/dev/null || true
+tmux new-session -d -s "coconductor-${PROJECT_NAME}" -x 220 -y 50
+tmux send-keys -t "=coconductor-${PROJECT_NAME}" \
+  "export PROJECT_DIR='<project-dir>' AIBUILDER_DIR='<aibuilder-dir>' PROJECT_NAME='$PROJECT_NAME'" Enter
 sleep 1
-tmux send-keys -t "coconductor-${PROJECT_NAME}" \
-  "cd '<project-dir>' && claude --model claude-sonnet-4-6 --agent '$COCONDUCTOR_AGENT'" Enter
+# --agent takes a name, not a file path (agents symlinked to ~/.claude/agents/ by devloop-start.sh)
+# --dangerously-skip-permissions required for headless dispatch — trust dialog hangs otherwise
+tmux send-keys -t "=coconductor-${PROJECT_NAME}" \
+  "cd '<project-dir>' && claude --model claude-sonnet-4-6 --dangerously-skip-permissions --agent co-conductor" Enter
+sleep 8
+tmux send-keys -t "=coconductor-${PROJECT_NAME}" "" Enter
 ```

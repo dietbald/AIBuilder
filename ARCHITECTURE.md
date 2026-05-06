@@ -102,7 +102,9 @@ A cron job fires an `audit` message every 15 minutes. Before sending, cron saves
 | 3 | Conductor session is dead | Kill, recreate, restart Claude, send STATUS.md context |
 | 4 | Restart failed — Conductor dead again on next audit | Write alert file, Telegram TJ, stop |
 
-The Co-Conductor never dispatches development agents. Its only job is keeping the Conductor alive and on track.
+The Co-Conductor dispatches only the Conductor agent itself (on Level 3 restart) — never any development agents (spec-author, implementer, etc.). Its only job is keeping the Conductor alive and on track.
+
+**Terminology note:** Co-Conductor uses "Level 0–4" for its corrective action scale. The Conductor uses "Tier 1–4" for escalation severity. These are distinct numbering systems. Co-Conductor Level 4 = "Conductor cannot be auto-recovered." Conductor Tier 4 = "business/credential decision requiring human judgment." Do not conflate them.
 
 ---
 
@@ -159,9 +161,13 @@ speccing ──────────────────► spec-verifyin
   │                                              FAIL→re-implement
   │                                                    │
   │                                                    ▼
-  │                                               done ──► deploy
+  │                                               done
   │                                                    │
-  │                                            (all features done)
+  │                                            (Conductor dispatches Deployer)
+  │                                                    ▼
+  │                                              staged ◄── Deployer PASS
+  │                                                    │
+  │                                       (all features staged)
   │                                                    ▼
   │                                          COMPLETION.md written
   │                                          cron stopped

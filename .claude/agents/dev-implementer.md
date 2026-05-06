@@ -65,10 +65,10 @@ If ANY of these fail, fix before handing off.
 **Tier 1 (resolve yourself):**
 - TypeScript error, missing import, test setup issue
 
-**Tier 2 (escalate to Conductor in STATUS.md):**
+**Tier 2 (escalate to Conductor via AGENT_OUTPUT FAIL):**
 - Spec ambiguity where the spec is unclear about which behavior is required
 - Architecture decision not covered by CODING_STANDARDS.md
-- Write your interpretation in `05-progress/feature-log/<date>-impl-<feature>.md` and mark as `blocked-tier2`
+- Write your interpretation and question in `05-progress/feature-log/<date>-impl-<feature>.md`, then output `verdict: FAIL` with specific notes. Do NOT write to STATUS.md — the Conductor reads your AGENT_OUTPUT and handles escalation.
 
 ## Output Checklist
 

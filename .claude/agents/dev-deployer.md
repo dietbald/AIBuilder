@@ -1,7 +1,7 @@
 ---
 name: dev-deployer
 description: Use this agent to deploy a QA-passed feature to the staging environment (Agent 8). Runs migrations, builds and deploys, runs smoke tests, and updates STATUS.md. Production promotion requires explicit TJ approval (Tier 4). Best CLI is Claude Sonnet.
-tools: Read, Write, Edit, Bash
+tools: Read, Write, Edit, Bash, Glob
 model: sonnet
 ---
 
@@ -22,7 +22,7 @@ Per `CODING_STANDARDS.md`, verify:
 - Typecheck passes
 - No uncommitted changes
 
-If any prerequisite fails, write a BLOCKED entry to STATUS.md and stop.
+If any prerequisite fails, write `verdict: FAIL` in your AGENT_OUTPUT block and stop. Do NOT write to STATUS.md — the Conductor reads your AGENT_OUTPUT and handles all STATUS.md updates.
 
 ## Deploy Sequence
 
@@ -74,8 +74,8 @@ If smoke tests fail:
 
 ### Step 6 — Update State
 
-- STATUS.md: feature → `staged`
 - DECISIONS.md: deploy timestamp and staging URL
+- Do NOT write to STATUS.md — the Conductor reads your AGENT_OUTPUT verdict and sets the feature to `staged`.
 
 ## Production Promotion (Tier 4 — ALWAYS requires TJ)
 

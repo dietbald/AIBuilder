@@ -14,16 +14,20 @@ Tests that must pass before the system is considered operational. Run in order �
 
 **The test:**
 ```bash
-tmux new-session -d -s test-claude
-tmux send-keys -t test-claude "claude" Enter
-sleep 5
-tmux send-keys -t test-claude "say the word PONG and nothing else" Enter
-sleep 15
-tmux capture-pane -t test-claude -p
-tmux kill-session -t test-claude
+tmux new-session -d -s test-pong -x 220 -y 50
+tmux send-keys -t =test-pong "claude --dangerously-skip-permissions" Enter
+sleep 8
+tmux send-keys -t =test-pong "" Enter   # absorb first-Enter quirk — Claude's boot sometimes eats it
+sleep 1
+tmux send-keys -t =test-pong "say the word PONG and nothing else" Enter
+for i in $(seq 1 30); do
+  tmux capture-pane -t =test-pong -p | grep -q '● PONG' && echo "PASS at poll $i" && break
+  sleep 2
+done
+tmux kill-session -t =test-pong
 ```
 
-**Pass criteria:** The captured output contains the word `PONG` cleanly, with no injection artifacts, garbled input, or empty response.
+**Pass criteria:** Output prints `PASS at poll N` within 30 polls (~60s). The `=` prefix on session names is required for exact-match (without it, tmux may match a prefix of another session name).
 
 **If it fails:** Replace `tmux send-keys` as the trigger mechanism. Options:
 - **File-based queue:** Conductor polls a trigger file (e.g., `.devloop/tick`) every N seconds. Cron writes the file. Conductor reads it, deletes it, acts.

@@ -11,8 +11,9 @@ You are the Brand Agent for project inception. You produce `brand.md` — the vi
 
 ## Read First
 
-1. `FEATURES.md` — understand who the users are and what they do
-2. `techstack.md` — confirm the UI stack (Tailwind? shadcn? custom?) so guidelines are compatible
+1. `05-progress/STATUS.md` — confirm I-2 (TechStack Agent) is marked complete before starting
+2. `FEATURES.md` — understand who the users are and what they do
+3. `techstack.md` — confirm the UI stack (Tailwind? shadcn? custom?) so guidelines are compatible
 
 ## Ask TJ (grouped, one AskUserQuestion call)
 
