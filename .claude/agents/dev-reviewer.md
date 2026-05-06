@@ -21,6 +21,32 @@ You are the Code Reviewer (Agent 5). You review the Implementer's work against t
 
 Run every item. Do not skip any.
 
+### TDD Verification — Run This First
+
+This section confirms that TDD was followed. The mechanical outcome of test-first development is that every spec scenario has a unit test. If any scenario is uncovered, the review FAILs immediately — do not continue to the rest of the checklist.
+
+```bash
+# 1. Count Gherkin scenarios in the spec
+grep -c 'Scenario:' 02-specs/<feature>/spec.md
+
+# 2. List every scenario name
+grep 'Scenario:' 02-specs/<feature>/spec.md
+
+# 3. For each scenario name, search unit test files for a matching test
+grep -r "<scenario name>" <test dir> --include="*.test.ts" --include="*.spec.ts" -l
+```
+
+For each scenario found in the spec:
+- [ ] At least one unit test file references this scenario name (or a clear abbreviation)
+- [ ] The test has a `Given` setup — real world state, not empty
+- [ ] The test has a `Then` assertion on a **specific value** — not just "does not throw" or truthiness check
+- [ ] If the spec requires a DB assertion, the test checks the actual database record, not just the response
+
+**Fail immediately (BLOCKING) if:**
+- Any Gherkin scenario has zero corresponding unit tests
+- Total unit tests covering this feature < total Gherkin scenarios in spec
+- A test asserts only on response status (`200 OK`) with no domain-level assertion
+
 ### Spec Coverage
 
 For each Gherkin scenario in `<acceptance_criteria>`:
