@@ -103,8 +103,8 @@ For each available slot:
 
 ```bash
 # Count total features and terminal-state features.
-# Terminal states: staged (deployed to staging) — the true end state of the pipeline.
-# done is kept as the QA-passed state; staged means deployer also ran successfully.
+# Terminal state: staged (QA passed AND deployed to staging).
+# The pipeline goes qa-testing → deploying → staged with no intermediate 'done' state.
 TOTAL=$(grep -c '| F-' "$PROJECT_DIR/05-progress/STATUS.md" 2>/dev/null || echo 0)
 DONE=$(grep -cE '\| staged \|' "$PROJECT_DIR/05-progress/STATUS.md" 2>/dev/null || echo 0)
 
@@ -233,6 +233,10 @@ RETRY_COUNT=${RETRY_COUNT:-0}
 # Reviewer and QA-tester FAIL verdicts mean "found bugs" — that is correct behaviour,
 # not a failure to do their job. Do not consume their retry budget on a correct FAIL.
 # Only timeout/crash (handled by the watchdog) should increment their retry counter.
+# NOTE: FAIL routing for these roles is handled by Step 4's transition table:
+#   reviewing FAIL → review-failed → re-dispatch implementer (review-retry key)
+#   qa-testing FAIL → implementing (qa-retry key)
+# No re-dispatch is needed here — Step 4 handles it on the next tick.
 SKIP_RETRY_COUNT=0
 case "$ROLE" in
   dev-reviewer|dev-qa-tester) SKIP_RETRY_COUNT=1 ;;
@@ -344,6 +348,17 @@ for DISPATCH_FILE in "$DISPATCH_DIR"/*.time; do
     dev-deployer) ROLE_TIMEOUT_SECS=3600 ;;  # 1 hour for CI wait
   esac
 
+  # Role-specific MAX_RETRIES for watchdog-triggered crashes/timeouts.
+  # Reviewer and QA-tester are verdict agents: their FAIL verdicts don't count against
+  # their watchdog retry budget (SKIP_RETRY_COUNT in Reading Agent Output). Only
+  # infrastructure failures (crash/timeout) consume this budget — give them more room.
+  # A MAX_RETRIES=2 threshold on a 30-min reviewer means 2 API-level crashes → Tier 4,
+  # which is too aggressive for normal API reliability variance.
+  ROLE_MAX_RETRIES=$MAX_RETRIES
+  case "$ROLE" in
+    dev-reviewer|dev-qa-tester) ROLE_MAX_RETRIES=4 ;;
+  esac
+
   # Detect crashed sessions: session dead + no output + >60s grace period
   # (60s grace avoids false positives on sessions that haven't started yet)
   SESSION_ALIVE=1
@@ -375,7 +390,7 @@ for DISPATCH_FILE in "$DISPATCH_DIR"/*.time; do
     echo "${RETRY_KEY}=${NEW_COUNT}" >> "${RL_FILE}.tmp"
     mv "${RL_FILE}.tmp" "$RL_FILE"
 
-    if [ "$NEW_COUNT" -gt "$MAX_RETRIES" ]; then
+    if [ "$NEW_COUNT" -gt "$ROLE_MAX_RETRIES" ]; then
       REASON="${KILL_REASON} — ${NEW_COUNT} times — retry ceiling exceeded"
       # Use Tier 4 escalation block above
     else

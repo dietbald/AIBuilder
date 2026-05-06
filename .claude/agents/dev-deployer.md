@@ -31,15 +31,27 @@ If any prerequisite fails, write `verdict: FAIL` in your AGENT_OUTPUT block and 
 ```bash
 git diff --stat HEAD  # show what will be committed
 git add -A            # stage all changes non-interactively (headless session — no interactive TUI)
-git commit -m "feat(<area>): <feature-name>
+
+# Idempotent commit: skip if nothing new to commit (re-dispatch scenario where a previous
+# attempt already committed before being killed mid-CI-wait)
+if ! git diff --staged --quiet; then
+  git commit -m "feat(<area>): <feature-name>
 
 <brief description>
 
 Spec: 02-specs/<feature>/spec.md
 QA report: 05-progress/qa-reports/<feature>-<date>.md"
+fi
 
 git push origin feat/<feature-id>
-gh pr create --title "<feature-name>" --body "$(cat 05-progress/qa-reports/<feature>-latest.md)"
+
+# Idempotent PR creation: skip if PR already exists for this branch (re-dispatch scenario)
+EXISTING_PR=$(gh pr list --head "feat/<feature-id>" --json number --jq 'length')
+if [ "$EXISTING_PR" -eq 0 ]; then
+  gh pr create --title "<feature-name>" --body "$(cat 05-progress/qa-reports/<feature>-latest.md)"
+else
+  echo "PR already exists for feat/<feature-id> — skipping gh pr create"
+fi
 ```
 
 ### Step 2 — Wait for CI Green

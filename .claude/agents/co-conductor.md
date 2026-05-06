@@ -126,10 +126,7 @@ TELEGRAM_TARGET=$(grep TELEGRAM_TARGET "$PROJECT_DIR/.devloop/config" 2>/dev/nul
   "⚠️ DevLoop DRIFT — Conductor appears off track. Sent realignment." 2>/dev/null || true
 ```
 
-### Level 3: Conductor dead — restart
-
-Before restarting, check if Level 3 was already attempted within the last 20 minutes.
-If so, the conductor is crashing on every boot — go directly to Level 4 instead:
+### Level 3: Conductor dead — restart (or Level 4 if restart already failed recently)
 
 ```bash
 LAST_RESTART="$PROJECT_DIR/.devloop/last-level3-restart.time"
@@ -137,50 +134,56 @@ NOW_TS=$(date +%s)
 LAST_TS=$(cat "$LAST_RESTART" 2>/dev/null || echo 0)
 SINCE_LAST=$(( NOW_TS - LAST_TS ))
 
-if [ "$SINCE_LAST" -lt 1200 ]; then  # 20 minutes
-  # Conductor was restarted recently but is dead again — escalate to Level 4
-  # (fall through to Level 4 block below)
+# IMPORTANT: this entire block is structured as if/else so that Level 3 and Level 4
+# are mutually exclusive. A comment-only guard does nothing — the else branch is the
+# only reliable way to prevent Level 3 from running when Level 4 is needed.
+
+if [ "$SINCE_LAST" -ge 1200 ]; then
+  # Enough time since last restart — safe to attempt Level 3.
+  # Record the restart timestamp BEFORE launching so a crash during launch is caught.
+  echo "$NOW_TS" > "$LAST_RESTART"
+
+  # Kill the dead session
+  tmux kill-session -t "=conductor-${PROJECT_NAME}" 2>/dev/null || true
+
+  # Create a fresh session with explicit geometry.
+  # --dangerously-skip-permissions: required to skip trust dialog in headless context.
+  # --agent dev-conductor: name resolved from ~/.claude/agents/ (symlinked by devloop-start.sh).
+  tmux new-session -d -s "conductor-${PROJECT_NAME}" -x 220 -y 50
+  tmux send-keys -t "=conductor-${PROJECT_NAME}" \
+    "export PROJECT_DIR='$PROJECT_DIR' AIBUILDER_DIR='$AIBUILDER_DIR' PROJECT_NAME='$PROJECT_NAME'" Enter
+  sleep 1
+  tmux send-keys -t "=conductor-${PROJECT_NAME}" \
+    "cd '$PROJECT_DIR' && claude --model claude-sonnet-4-6 --dangerously-skip-permissions --agent dev-conductor" Enter
+  sleep 8
+  tmux send-keys -t "=conductor-${PROJECT_NAME}" "" Enter   # absorb first-Enter quirk
+  sleep 1
+
+  # Send restart context — pass the file path, NOT the file contents.
+  # Embedding STATUS.md inline in tmux send-keys means each newline fires as Enter,
+  # sending partial shell commands and corrupting the new session's state entirely.
+  tmux send-keys -t "=conductor-${PROJECT_NAME}" \
+    "RESTART by Co-Conductor at $(date -u +%Y-%m-%dT%H:%M:%SZ). Resume from current state — do NOT redo completed stages. Re-read STATUS.md at $PROJECT_DIR/05-progress/STATUS.md to orient." \
+    Enter
+
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] RESTART — Conductor was dead, relaunched" \
+    >> "$PROJECT_DIR/.devloop/co-conductor.log"
+
+  TELEGRAM_TARGET=$(grep TELEGRAM_TARGET "$PROJECT_DIR/.devloop/config" 2>/dev/null | cut -d= -f2)
+  [ -n "$TELEGRAM_TARGET" ] && openclaw message send --channel telegram --target "$TELEGRAM_TARGET" \
+    "🔄 DevLoop RESTART — Conductor was dead. Auto-restarted. Verify it resumed correctly." 2>/dev/null || true
+
+else
+  # Conductor was restarted recently (within 20 min) and is dead again.
+  # It is crashing on every boot — escalate to Level 4 instead of looping.
+  # Fall through to Level 4 block below.
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] LOOP DETECTED — Conductor dead again ${SINCE_LAST}s after last restart — escalating to Level 4" \
+    >> "$PROJECT_DIR/.devloop/co-conductor.log"
 fi
-
-# Record this restart attempt before launching
-echo "$NOW_TS" > "$LAST_RESTART"
-```
-
-```bash
-# Kill the dead session
-tmux kill-session -t "=conductor-${PROJECT_NAME}" 2>/dev/null || true
-
-# Create a fresh session (one window) with explicit geometry.
-# --dangerously-skip-permissions: required to skip trust dialog in headless context.
-# --agent dev-conductor: uses the name resolved from ~/.claude/agents/ (symlinked by devloop-start.sh).
-#   Do NOT pass a file path — --agent takes a name, not a path.
-tmux new-session -d -s "conductor-${PROJECT_NAME}" -x 220 -y 50
-tmux send-keys -t "=conductor-${PROJECT_NAME}" \
-  "export PROJECT_DIR='$PROJECT_DIR' AIBUILDER_DIR='$AIBUILDER_DIR' PROJECT_NAME='$PROJECT_NAME'" Enter
-sleep 1
-tmux send-keys -t "=conductor-${PROJECT_NAME}" \
-  "cd '$PROJECT_DIR' && claude --model claude-sonnet-4-6 --dangerously-skip-permissions --agent dev-conductor" Enter
-sleep 8
-tmux send-keys -t "=conductor-${PROJECT_NAME}" "" Enter   # absorb first-Enter quirk
-sleep 1
-
-# Send restart context — pass the file path, NOT the file contents.
-# Embedding STATUS.md inline in tmux send-keys means each newline fires as Enter,
-# sending partial shell commands and corrupting the new session's state entirely.
-tmux send-keys -t "=conductor-${PROJECT_NAME}" \
-  "RESTART by Co-Conductor at $(date -u +%Y-%m-%dT%H:%M:%SZ). Resume from current state — do NOT redo completed stages. Re-read STATUS.md at $PROJECT_DIR/05-progress/STATUS.md to orient." \
-  Enter
-
-echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] RESTART — Conductor was dead, relaunched" \
-  >> "$PROJECT_DIR/.devloop/co-conductor.log"
-
-TELEGRAM_TARGET=$(grep TELEGRAM_TARGET "$PROJECT_DIR/.devloop/config" 2>/dev/null | cut -d= -f2)
-[ -n "$TELEGRAM_TARGET" ] && openclaw message send --channel telegram --target "$TELEGRAM_TARGET" \
-  "🔄 DevLoop RESTART — Conductor was dead. Auto-restarted. Verify it resumed correctly." 2>/dev/null || true
 ```
 
 ### Level 4: Escalate to TJ
-Only when Level 3 fails — Conductor restarted but dead again on the next audit.
+Only when Level 3 fails — Conductor restarted but dead again within 20 minutes.
 
 ```bash
 cat >> "$PROJECT_DIR/.devloop/co-conductor-alert.md" << ALERT

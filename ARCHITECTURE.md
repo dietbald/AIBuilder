@@ -227,7 +227,7 @@ STATUS.md is the pipeline's durable state. Every agent reads it. **The Conductor
 ```markdown
 | Feature | Status |
 |---|---|
-| F-01-user-auth | done |
+| F-01-user-auth | staged |
 | F-02-bid-submission | reviewing |
 | F-03-search | speccing |
 | F-04-notifications | pending |
@@ -302,9 +302,15 @@ On every tick, the Conductor checks `.devloop/agent-dispatch/*.time` files. Each
 
 - The dispatch file exists (agent was launched)
 - The output file does NOT contain `---DEVLOOP_DONE---` (not finished)
-- `now - dispatch_time > 1800` (30 minutes have elapsed)
+- `now - dispatch_time > ROLE_TIMEOUT_SECS` (default 30 minutes; Deployer gets 60 minutes)
 
 Then the Conductor kills the session, removes the dispatch record, and applies the standard retry logic. The timeout counts against the retry budget — an agent that times out twice hits the same Tier 4 ceiling as one that FAILs twice.
+
+**Role-specific timeout overrides:**
+- `dev-deployer`: 3600s (60 minutes) — `gh pr checks --watch` blocks until CI finishes, which routinely takes 10–30 minutes.
+
+**Role-specific retry budget overrides:**
+- `dev-reviewer`, `dev-qa-tester`: MAX_RETRIES=4 for watchdog-triggered crashes/timeouts. These roles' FAIL verdicts (finding bugs) do not consume this budget — only infrastructure crashes do. A tighter budget would Tier-4 the feature on API reliability issues, not code quality problems.
 
 This prevents a stuck agent from silently consuming tokens indefinitely with no output.
 
@@ -321,7 +327,9 @@ case "$ROLE" in
 esac
 ```
 
-Implementer and Test Author run on **Claude Sonnet 4.6**. Reviewer runs on **Claude Opus 4.7**. All other agents (Spec Author, Spec Verifier, QA Tester, Auditor, Deployer) default to Opus 4.7.
+Implementer and Test Author run on **Claude Sonnet 4.6**. Reviewer runs on **Claude Opus 4.7**. All other sub-agents (Spec Author, Spec Verifier, QA Tester, Auditor, Deployer) default to Opus 4.7.
+
+**Note:** The Conductor and Co-Conductor are launched directly by `devloop-start.sh` with `--model claude-sonnet-4-6` — the case statement above applies only to sub-agents dispatched by the Conductor.
 
 The reason: two agents from the same model family trained on the same data will make the same mistakes and share the same blind spots. A Reviewer on a different model than the Implementer catches systematic biases that a same-model review normalises — the same way a second human with different training catches errors the first human's mental model accepts as normal.
 
