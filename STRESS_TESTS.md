@@ -57,7 +57,7 @@ claude --print --dangerously-skip-permissions \
 
 ---
 
-## ST-04 — Cron PATH
+## ST-03 — Cron PATH
 
 **Status:** Not yet run  
 **Priority:** First-run blocker  
@@ -75,7 +75,7 @@ claude --print --dangerously-skip-permissions \
 
 ---
 
-## ST-03 — tmux Exact-Match Session Check
+## ST-04 — tmux Exact-Match Session Check
 
 **Status:** Not yet run  
 **What it tests:** Whether `tmux has-session -t "=session-name"` (exact-match syntax) works correctly in the installed tmux version and prevents partial-name false positives.

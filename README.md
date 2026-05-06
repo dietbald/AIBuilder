@@ -140,7 +140,7 @@ bash /path/to/AIBuilder/scripts/devloop-start.sh /path/to/your/project
 This script:
 1. Verifies `AGENTS.md` and `FEATURES.md` exist
 2. Installs agent symlinks to `~/.claude/agents/` (required for `--agent <name>` resolution)
-3. Creates required directories (`02-specs/`, `05-progress/`, `05-progress/qa-reports/`, `.devloop/`, `.devloop/agent-dispatch/`)
+3. Creates required directories (`02-specs/`, `05-progress/`, `05-progress/qa-reports/`, `05-progress/audit-reports/`, `05-progress/feature-log/`, `.devloop/`, `.devloop/agent-dispatch/`)
 4. Initializes `STATUS.md` if missing
 5. Launches `conductor-<PROJECT>` tmux session (interactive Claude)
 6. Launches `coconductor-<PROJECT>` tmux session (interactive Claude)

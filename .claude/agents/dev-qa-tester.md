@@ -1,6 +1,6 @@
 ---
 name: dev-qa-tester
-description: Use this agent to run QA on a feature after code review passes (Agent 6). Launches the actual app, executes user flows from the spec using browser automation, documents every gap found, and produces a QA report. Feeds gaps back into the Conductor for gap-closure loop. Does NOT write code — only tests and reports. Best CLI is Claude Sonnet + BrowserControl.
+description: Use this agent to run QA on a feature after code review passes (Agent 6). Launches the actual app, executes user flows from the spec using browser automation, documents every gap found, and produces a QA report. Feeds gaps back into the Conductor for gap-closure loop. Does NOT write code — only tests and reports. Runs on Claude Opus 4.7 with BrowserControl.
 tools: Read, Write, Bash, BrowserControl
 model: opus
 ---

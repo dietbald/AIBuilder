@@ -282,8 +282,8 @@ If the session exists, the Conductor skips dispatch. This prevents the same feat
 The Conductor and Co-Conductor are triggered by cron via `tmux send-keys`:
 
 ```
-*/3  * * * *  tmux send-keys -t 'conductor-<PROJECT>' 'tick' Enter  # devloop-<PROJECT>-tick
-*/15 * * * *  cp STATUS.md .devloop/status-snapshot.md; tmux send-keys -t 'coconductor-<PROJECT>' 'audit' Enter  # devloop-<PROJECT>-audit
+*/3  * * * *  tmux send-keys -t '=conductor-<PROJECT>' 'tick' Enter  # devloop-<PROJECT>-tick
+*/15 * * * *  cp '<PROJECT_DIR>/05-progress/STATUS.md' '<PROJECT_DIR>/.devloop/status-snapshot.md'; tmux send-keys -t '=coconductor-<PROJECT>' 'audit' Enter  # devloop-<PROJECT>-audit
 ```
 
 This is an undocumented assumption: that `claude` interactive mode accepts input injected via tmux pseudo-TTY the same way it accepts input from a real terminal. **ST-01 (the PONG test) verifies this assumption before any real project runs.**

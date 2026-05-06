@@ -1,6 +1,6 @@
 ---
 name: dev-deployer
-description: Use this agent to deploy a QA-passed feature to the staging environment (Agent 8). Runs migrations, builds and deploys, runs smoke tests, and updates STATUS.md. Production promotion requires explicit TJ approval (Tier 4). Best CLI is Claude Sonnet.
+description: Use this agent to deploy a QA-passed feature to the staging environment (Agent 8). Runs migrations, builds and deploys, runs smoke tests. Runs on Claude Opus 4.7. Production promotion requires explicit TJ approval (Tier 4).
 tools: Read, Write, Edit, Bash, Glob
 model: opus
 ---
@@ -69,8 +69,8 @@ Follow the deploy procedure documented in `CODING_STANDARDS.md § Deploy`.
 
 If smoke tests fail:
 1. Roll back if migration was data-destructive
-2. Write FAILED entry in STATUS.md
-3. Escalate to Implementer + Conductor
+2. Write `verdict: FAIL` in your AGENT_OUTPUT block — the Conductor reads it and handles the STATUS.md update
+3. Escalate details to Conductor via your AGENT_OUTPUT `notes:` field
 
 ### Step 6 — Update State
 

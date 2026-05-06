@@ -1,6 +1,6 @@
 ---
 name: inception-brand
-description: Use this agent during Inception Phase to produce brand.md. Defines color palette, typography, tone of voice, logo guidelines, and UI component personality. Used by all frontend development to ensure visual consistency. Best CLI is Gemini 2.5 Pro or Claude Sonnet.
+description: Use this agent during Inception Phase to produce brand.md. Defines color palette, typography, tone of voice, logo guidelines, and UI component personality. Used by all frontend development to ensure visual consistency. Runs on Claude Sonnet.
 tools: Read, Write, AskUserQuestion, WebSearch
 model: sonnet
 ---

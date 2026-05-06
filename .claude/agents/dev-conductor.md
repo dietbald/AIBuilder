@@ -35,7 +35,8 @@ All file paths are relative to `$PROJECT_DIR`. All agent files are under `$AIBUI
 
 ### Step 1: Process completions
 
-For each feature currently in an active state (`speccing`, `implementing`, `test-authoring`, `reviewing`, `qa-testing`):
+For each feature currently in an active state (`speccing`, `implementing`, `test-authoring`, `reviewing`, `qa-testing`, `deploying`):
+Note: `review-failed` is an unconditional transition (no agent output to poll) — it is handled in Step 4 directly.
 
 ```bash
 OUTPUT="/tmp/devloop-out-${ROLE}-${FEATURE}.txt"
@@ -71,10 +72,12 @@ For each available slot:
 | Current status | Condition | Next status | Action |
 |---|---|---|---|
 | `speccing` | output has `verdict: PASS` | `spec-verifying` | dispatch `dev-spec-verifier` |
-| `spec-verifying` | output has `verdict: PASS` | `spec-approved` | notify TJ or auto-approve |
-| `spec-approved` | — | `implementing` | dispatch `dev-implementer` |
+| `spec-verifying` | output has `verdict: PASS` | `spec-approved` | update STATUS.md; send Telegram notification to TJ (informational — does NOT block pipeline) |
+| `spec-approved` | — | `implementing` | dispatch `dev-implementer` (auto-advances — no human gate) |
 | `implementing` | output has `verdict: PASS` | `test-authoring` | dispatch `dev-test-author` |
+| `implementing` | output has `verdict: FAIL` | `implementing` | re-dispatch `dev-implementer` with failure notes; retry logic applies (`${FEATURE}:dev-implementer`) |
 | `test-authoring` | output has `verdict: PASS` | `reviewing` | dispatch `dev-reviewer` |
+| `test-authoring` | output has `verdict: FAIL` | `test-authoring` | re-dispatch `dev-test-author` with failure notes; retry logic applies (`${FEATURE}:dev-test-author`) |
 | `spec-verifying` | output has `verdict: FAIL` | `speccing` | re-dispatch `dev-spec-author` with rejection notes from verifier report |
 | `reviewing` | output has `verdict: PASS` | `qa-testing` | dispatch `dev-qa-tester` |
 | `reviewing` | output has `verdict: FAIL` | `review-failed` | update STATUS.md; **use retry key `${FEATURE}:dev-implementer:review-retry`** on next tick |
@@ -89,6 +92,8 @@ For each available slot:
 > # Implementation stage retries:   RETRY_KEY="${FEATURE}:dev-implementer"
 > # Review-failure re-dispatch:      RETRY_KEY="${FEATURE}:dev-implementer:review-retry"
 > # QA-failure re-dispatch:          RETRY_KEY="${FEATURE}:dev-implementer:qa-retry"
+> # Test-author retries:             RETRY_KEY="${FEATURE}:dev-test-author"
+> # Deployer retries:                RETRY_KEY="${FEATURE}:dev-deployer"
 > ```
 
 ### Step 5: Check for completion or log idle
