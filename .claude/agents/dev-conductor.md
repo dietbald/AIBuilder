@@ -22,14 +22,15 @@ All file paths are relative to `$PROJECT_DIR`. All agent files are under `$AIBUI
 
 1. Increment tick counter and check for session rotation (see Session Rotation).
 2. Re-read `05-progress/STATUS.md` → get current state of all features
-3. Run timeout watchdog — kill any agent running >30 min with no output (see Agent Timeout Watchdog).
-4. Check for completed agent sessions (poll output files for `---DEVLOOP_DONE---`)
-5. Process any completions — advance features in STATUS.md
-6. Assess: what needs to happen next?
-7. Take exactly ONE action (see Action Decision Tree)
-8. Atomically update `05-progress/STATUS.md`
-9. Append one line to `05-progress/conductor-log.md`
-10. Reply with a one-line summary of what you did, then stop and wait for the next tick
+3. Re-read `05-progress/RETRIES.md` → get current retry counts (do NOT rely on conversation history for these)
+4. Run timeout watchdog — kill any agent running >30 min with no output (see Agent Timeout Watchdog).
+5. Check for completed agent sessions (poll output files for `---DEVLOOP_DONE---`)
+6. Process any completions — advance features in STATUS.md
+7. Assess: what needs to happen next?
+8. Take exactly ONE action (see Action Decision Tree)
+9. Atomically update `05-progress/STATUS.md`
+10. Append one line to `05-progress/conductor-log.md`
+11. Reply with a one-line summary of what you did, then stop and wait for the next tick
 
 ## Action Decision Tree
 
@@ -59,7 +60,8 @@ Document ALL Tier 1–3 resolutions in `05-progress/DECISIONS.md`.
 
 ### Step 3: Dispatch new work
 
-Check STATUS.md for features with `status: pending` whose dependencies are all `status: done`.
+Check STATUS.md for features with `status: pending` whose dependencies are all `status: staged`.
+(`staged` is the terminal STATUS.md state — `done` is not a valid STATUS.md feature state.)
 
 For each available slot:
 1. Pick the highest-priority eligible feature
@@ -72,6 +74,7 @@ For each available slot:
 | Current status | Condition | Next status | Action |
 |---|---|---|---|
 | `speccing` | output has `verdict: PASS` | `spec-verifying` | dispatch `dev-spec-verifier` |
+| `speccing` | output has `verdict: FAIL` | `speccing` | re-dispatch `dev-spec-author` with failure notes; retry logic applies (`${FEATURE}:dev-spec-author`) |
 | `spec-verifying` | output has `verdict: PASS` | `spec-approved` | update STATUS.md; send Telegram notification to TJ (informational — does NOT block pipeline) |
 | `spec-approved` | — | `implementing` | dispatch `dev-implementer` (auto-advances — no human gate) |
 | `implementing` | output has `verdict: PASS` | `test-authoring` | dispatch `dev-test-author` |
@@ -79,7 +82,7 @@ For each available slot:
 | `test-authoring` | output has `verdict: PASS` | `reviewing` | dispatch `dev-reviewer` |
 | `test-authoring` | output has `verdict: FAIL` | `test-authoring` | re-dispatch `dev-test-author` with failure notes; retry logic applies (`${FEATURE}:dev-test-author`) |
 | `spec-verifying` | output has `verdict: FAIL` | `speccing` | re-dispatch `dev-spec-author` with rejection notes from verifier report |
-| `reviewing` | output has `verdict: PASS` | `qa-testing` | dispatch `dev-qa-tester` |
+| `reviewing` | output has `verdict: PASS` | `qa-testing` | dispatch `dev-qa-tester` — **but only if no other feature is currently in `qa-testing`**; the QA tester starts a dev server on a fixed port; two simultaneous QA testers cause port conflicts and false FAILs |
 | `reviewing` | output has `verdict: FAIL` | `review-failed` | update STATUS.md; **use retry key `${FEATURE}:dev-implementer:review-retry`** on next tick |
 | `qa-testing` | output has `verdict: PASS` | `deploying` | dispatch `dev-deployer`; update STATUS.md |
 | `deploying` | output has `verdict: PASS` | `staged` | update STATUS.md |
@@ -398,12 +401,12 @@ for DISPATCH_FILE in "$DISPATCH_DIR"/*.time; do
       # on the next tick. Without an explicit re-dispatch here, the feature stays in its
       # active state with no agent session and no dispatch file, and Step 4 has no rule for
       # "active state, no agent, no output" → it stalls indefinitely.
-      log_event "$FEATURE" "$ROLE" "retry" "attempt=${NEW_COUNT}/${MAX_RETRIES} reason=${KILL_REASON}"
+      log_event "$FEATURE" "$ROLE" "retry" "attempt=${NEW_COUNT}/${ROLE_MAX_RETRIES} reason=${KILL_REASON}"
       # Call the dispatch block for this FEATURE/ROLE. The rm -f output + new session
       # creation below is the same pattern as the main dispatch block.
       OUTPUT="/tmp/devloop-out-${ROLE}-${FEATURE}.txt"
       rm -f "$OUTPUT"
-      CONTEXT="Feature: $FEATURE. Output file: $OUTPUT. Project dir: $PROJECT_DIR. Previous attempt: ${KILL_REASON} (retry ${NEW_COUNT}/${MAX_RETRIES})."
+      CONTEXT="Feature: $FEATURE. Output file: $OUTPUT. Project dir: $PROJECT_DIR. Previous attempt: ${KILL_REASON} (retry ${NEW_COUNT}/${ROLE_MAX_RETRIES})."
       case "$ROLE" in
         dev-implementer|dev-test-author) AGENT_MODEL="claude-sonnet-4-6" ;;
         *) AGENT_MODEL="claude-opus-4-7" ;;
@@ -413,7 +416,7 @@ for DISPATCH_FILE in "$DISPATCH_DIR"/*.time; do
         "export PROJECT_DIR='$PROJECT_DIR' AIBUILDER_DIR='$AIBUILDER_DIR' PROJECT_NAME='$PROJECT_NAME' && cd '$PROJECT_DIR' && claude --model $AGENT_MODEL --print --dangerously-skip-permissions --agent '$ROLE' '$CONTEXT' < /dev/null > '$OUTPUT' 2>&1; echo EXIT_CODE=\$?" \
         Enter
       echo "$(date +%s)" > "$PROJECT_DIR/.devloop/agent-dispatch/${ROLE}-${FEATURE}.time"
-      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] RETRY DISPATCHED — ${ROLE}/${FEATURE} (attempt ${NEW_COUNT}/${MAX_RETRIES})" \
+      echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] RETRY DISPATCHED — ${ROLE}/${FEATURE} (attempt ${NEW_COUNT}/${ROLE_MAX_RETRIES})" \
         >> "$PROJECT_DIR/05-progress/conductor-log.md"
     fi
   fi

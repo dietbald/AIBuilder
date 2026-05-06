@@ -29,11 +29,19 @@ If any prerequisite fails, write `verdict: FAIL` in your AGENT_OUTPUT block and 
 ### Step 1 — Create a Git Commit and PR
 
 ```bash
+# Build the branch name from the feature ID (substitute the actual feature slug).
+# The Conductor passes "Feature: $FEATURE" in context — use it directly.
+BRANCH="feat/${FEATURE}"   # e.g. feat/F-01-user-auth
+
+# Create or switch to the feature branch.
+# Idempotent: git switch -c errors if branch already exists; use || to handle re-dispatch.
+git switch -c "$BRANCH" 2>/dev/null || git switch "$BRANCH"
+
 git diff --stat HEAD  # show what will be committed
 git add -A            # stage all changes non-interactively (headless session — no interactive TUI)
 
-# Idempotent commit: skip if nothing new to commit (re-dispatch scenario where a previous
-# attempt already committed before being killed mid-CI-wait)
+# Idempotent commit: skip if nothing new to commit (re-dispatch after a previous attempt
+# already committed before being killed mid-CI-wait)
 if ! git diff --staged --quiet; then
   git commit -m "feat(<area>): <feature-name>
 
@@ -43,14 +51,18 @@ Spec: 02-specs/<feature>/spec.md
 QA report: 05-progress/qa-reports/<feature>-<date>.md"
 fi
 
-git push origin feat/<feature-id>
+# Idempotent push: only push if local branch is ahead of remote (or remote doesn't exist yet)
+LOCAL_AHEAD=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo 1)
+if [ "$LOCAL_AHEAD" -gt 0 ]; then
+  git push origin "$BRANCH"
+fi
 
 # Idempotent PR creation: skip if PR already exists for this branch (re-dispatch scenario)
-EXISTING_PR=$(gh pr list --head "feat/<feature-id>" --json number --jq 'length')
+EXISTING_PR=$(gh pr list --head "$BRANCH" --json number --jq 'length')
 if [ "$EXISTING_PR" -eq 0 ]; then
   gh pr create --title "<feature-name>" --body "$(cat 05-progress/qa-reports/<feature>-latest.md)"
 else
-  echo "PR already exists for feat/<feature-id> — skipping gh pr create"
+  echo "PR already exists for $BRANCH — skipping gh pr create"
 fi
 ```
 

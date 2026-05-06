@@ -57,7 +57,7 @@ If `allowed-packages.md` exists:
 ### 6. Test Coverage Gaps
 
 - Identify Gherkin scenarios from spec files that don't have corresponding unit tests
-- Identify features marked `done` in STATUS.md that have no QA report
+- Identify features marked `staged` in STATUS.md that have no QA report
 
 ### 7. QUIRK-PRESERVE Integrity
 

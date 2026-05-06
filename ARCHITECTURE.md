@@ -407,7 +407,7 @@ This is the only way the pipeline stops autonomously. Any other stop (mid-projec
 | Conductor is sole STATUS.md writer | Sub-agents write only output files; Conductor owns all state transitions |
 | Agents are independently restartable | One-shot sub-agents; Conductor re-orients from STATUS.md |
 | No double-dispatch | `tmux has-session -t "=name"` exact-match check before every dispatch |
-| No silent runaway agents | Timeout watchdog kills at 30 min; $MAX_RETRIES=2 caps retries |
+| No silent runaway agents | Timeout watchdog kills at 30 min (60 min for Deployer); MAX_RETRIES=2 caps retries (4 for Reviewer/QA Tester infrastructure crashes) |
 | Context rot prevented | Session rotation at tick 50 |
 | Human only for genuine blockers | Tier 4 escalation with Telegram |
 | Pipeline is machine-readable | AGENT_SCHEMA.md structured 5-field output contract |

@@ -95,7 +95,7 @@ No Telegram. No other action.
 
 ### Level 1: Stall — wake up the Conductor
 ```bash
-CURRENT_STAGE=$(grep -E 'implementing|speccing|reviewing|qa' "$PROJECT_DIR/05-progress/STATUS.md" \
+CURRENT_STAGE=$(grep -E 'speccing|spec-verifying|implementing|test-authoring|reviewing|qa-testing|deploying' "$PROJECT_DIR/05-progress/STATUS.md" \
   | head -3 | tr '\n' '; ')
 
 tmux send-keys -t "=conductor-${PROJECT_NAME}" \
@@ -175,18 +175,13 @@ if [ "$SINCE_LAST" -ge 1200 ]; then
 
 else
   # Conductor was restarted recently (within 20 min) and is dead again.
-  # It is crashing on every boot — escalate to Level 4 instead of looping.
-  # Fall through to Level 4 block below.
+  # It is crashing on every boot — escalate to Level 4.
+  # Level 4 is INSIDE this else branch so it only fires when the loop is detected,
+  # not as a standalone section that could run unconditionally.
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] LOOP DETECTED — Conductor dead again ${SINCE_LAST}s after last restart — escalating to Level 4" \
     >> "$PROJECT_DIR/.devloop/co-conductor.log"
-fi
-```
 
-### Level 4: Escalate to TJ
-Only when Level 3 fails — Conductor restarted but dead again within 20 minutes.
-
-```bash
-cat >> "$PROJECT_DIR/.devloop/co-conductor-alert.md" << ALERT
+  cat >> "$PROJECT_DIR/.devloop/co-conductor-alert.md" << ALERT
 
 ---
 ## ALERT — $(date)
@@ -199,10 +194,14 @@ $(cat "$PROJECT_DIR/05-progress/STATUS.md")
 Action required: bash $AIBUILDER_DIR/scripts/devloop-start.sh '$PROJECT_DIR'
 ALERT
 
-TELEGRAM_TARGET=$(grep TELEGRAM_TARGET "$PROJECT_DIR/.devloop/config" 2>/dev/null | cut -d= -f2)
-[ -n "$TELEGRAM_TARGET" ] && openclaw message send --channel telegram --target "$TELEGRAM_TARGET" \
-  "🚨 DevLoop ESCALATION — Conductor could not be auto-recovered. Manual restart required. Run: bash $AIBUILDER_DIR/scripts/devloop-start.sh '$PROJECT_DIR'" 2>/dev/null || true
+  TELEGRAM_TARGET=$(grep TELEGRAM_TARGET "$PROJECT_DIR/.devloop/config" 2>/dev/null | cut -d= -f2)
+  [ -n "$TELEGRAM_TARGET" ] && openclaw message send --channel telegram --target "$TELEGRAM_TARGET" \
+    "🚨 DevLoop ESCALATION — Conductor could not be auto-recovered. Manual restart required. Run: bash $AIBUILDER_DIR/scripts/devloop-start.sh '$PROJECT_DIR'" 2>/dev/null || true
+fi
 ```
+
+### Level 4: Escalate to TJ
+Level 4 is now embedded inside the Level 3 `else` branch above — it fires automatically when the loop-detection condition is met. The separate heading here is kept only for navigation reference.
 
 ## Audit Log Format
 
