@@ -27,24 +27,26 @@ This section confirms that TDD was followed. The mechanical outcome of test-firs
 
 ```bash
 # 1. Count Gherkin scenarios in the spec
-grep -c 'Scenario:' 02-specs/<feature>/spec.md
+grep -cF 'Scenario:' 02-specs/<feature>/spec.md
 
 # 2. List every scenario name
-grep 'Scenario:' 02-specs/<feature>/spec.md
+grep -F 'Scenario:' 02-specs/<feature>/spec.md
 
-# 3. For each scenario name, search unit test files for a matching test
-grep -r "<scenario name>" <test dir> --include="*.test.ts" --include="*.spec.ts" -l
+# 3. For each scenario name, search unit test files for a literal fixed-string match
+#    (-F disables regex interpretation — scenario names often contain $, (, ), / characters)
+grep -rF "<scenario name>" <test dir> --include="*.test.ts" --include="*.spec.ts" -l
 ```
 
+**If no literal match is found for a scenario name:** read the test files and look for a `describe`/`it` block that clearly corresponds to the scenario by behavior — the implementer may have paraphrased the name. If the behavior is covered, it passes. Only FAIL if there is genuinely no test covering the scenario's behavior, not merely no test with the exact name.
+
 For each scenario found in the spec:
-- [ ] At least one unit test file references this scenario name (or a clear abbreviation)
+- [ ] At least one unit test covers this scenario (by name or clear behavioral equivalent)
 - [ ] The test has a `Given` setup — real world state, not empty
 - [ ] The test has a `Then` assertion on a **specific value** — not just "does not throw" or truthiness check
 - [ ] If the spec requires a DB assertion, the test checks the actual database record, not just the response
 
 **Fail immediately (BLOCKING) if:**
-- Any Gherkin scenario has zero corresponding unit tests
-- Total unit tests covering this feature < total Gherkin scenarios in spec
+- Any Gherkin scenario has zero corresponding unit tests AND no behavioral equivalent
 - A test asserts only on response status (`200 OK`) with no domain-level assertion
 
 ### Spec Coverage

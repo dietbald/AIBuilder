@@ -36,7 +36,28 @@ tmux kill-session -t =test-pong
 
 ---
 
-## ST-02 — Cron PATH
+## ST-02 — Headless `--print --agent` Dispatch
+
+**Status:** Not yet run
+**Priority:** Gate — if this fails, sub-agent dispatch is broken before anything else runs
+**What it tests:** Whether `claude --print --dangerously-skip-permissions --agent <name>` works headlessly — the exact pattern every sub-agent dispatch uses.
+
+**The test:**
+```bash
+# Uses inline --agents to avoid depending on any external agent file being installed
+claude --print --dangerously-skip-permissions \
+  --agents '{"pong-test":{"description":"trivial pong","prompt":"Reply with the single word PONG and nothing else."}}' \
+  --agent pong-test \
+  "go" < /dev/null
+```
+
+**Pass criteria:** Output contains `PONG`. Wall time ~8s.
+
+**If it fails:** The `--print --agent` dispatch architecture is broken. Check that `--agents` inline JSON is supported in this Claude Code version (`claude --version`), and that `--dangerously-skip-permissions` does not error.
+
+---
+
+## ST-04 — Cron PATH
 
 **Status:** Not yet run  
 **Priority:** First-run blocker  
@@ -75,7 +96,7 @@ tmux kill-session -t "agent-dev-spec-author-F-01-BidPlatform"
 
 ---
 
-## ST-04 — Tick Deduplication (Lockfile)
+## ST-05 — Tick Deduplication (Lockfile)
 
 **Status:** Not yet run  
 **What it tests:** That a second cron tick arriving while the conductor is mid-response is correctly suppressed by the lockfile mechanism.
@@ -84,7 +105,7 @@ tmux kill-session -t "agent-dev-spec-author-F-01-BidPlatform"
 
 ---
 
-## ST-05 — Conductor Restart Reconciliation
+## ST-06 — Conductor Restart Reconciliation
 
 **Status:** Not yet run  
 **What it tests:** That when the conductor session is killed mid-task and restarted (either by co-conductor Level 3 restart or by session rotation at tick 50), it correctly reconciles orphaned agent sessions and advances STATUS.md before taking new action.

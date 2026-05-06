@@ -298,8 +298,10 @@ tmux kill-session -t =test-pong
 # Must print "PASS at poll N" — if it times out, the conductor trigger mechanism is broken.
 
 # ST-02 — verify --print --agent headless dispatch (the sub-agent pattern)
-claude --print --dangerously-skip-permissions --agent general-purpose \
-  "say the word PONG and nothing else" < /dev/null
+# Uses inline --agents so this test has no external dependency on installed agent files
+claude --print --dangerously-skip-permissions \
+  --agents '{"pong-test":{"description":"trivial pong","prompt":"Reply with the single word PONG and nothing else."}}' \
+  --agent pong-test "go" < /dev/null
 # Must output: PONG
 ```
 

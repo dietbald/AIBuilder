@@ -19,9 +19,9 @@ for session in $(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep "^ag
   tmux kill-session -t "$session" 2>/dev/null && echo "  Killed agent session: $session" || true
 done
 
-# Kill conductor and co-conductor
-tmux kill-session -t "$CONDUCTOR_SESSION"   2>/dev/null && echo "  Killed: $CONDUCTOR_SESSION"   || echo "  (not running): $CONDUCTOR_SESSION"
-tmux kill-session -t "$COCONDUCTOR_SESSION" 2>/dev/null && echo "  Killed: $COCONDUCTOR_SESSION" || echo "  (not running): $COCONDUCTOR_SESSION"
+# Kill conductor and co-conductor (= prefix required for exact-match)
+tmux kill-session -t "=$CONDUCTOR_SESSION"   2>/dev/null && echo "  Killed: $CONDUCTOR_SESSION"   || echo "  (not running): $CONDUCTOR_SESSION"
+tmux kill-session -t "=$COCONDUCTOR_SESSION" 2>/dev/null && echo "  Killed: $COCONDUCTOR_SESSION" || echo "  (not running): $COCONDUCTOR_SESSION"
 
 # Remove cron jobs
 ( crontab -l 2>/dev/null | grep -v "# devloop-${PROJECT_NAME}-" ) | crontab - 2>/dev/null || true

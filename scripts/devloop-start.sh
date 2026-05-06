@@ -55,6 +55,8 @@ fi
 # ── Create required directories ───────────────────────────────────────
 mkdir -p "$PROJECT_DIR/02-specs"
 mkdir -p "$PROJECT_DIR/05-progress/qa-reports"
+mkdir -p "$PROJECT_DIR/05-progress/audit-reports"
+mkdir -p "$PROJECT_DIR/05-progress/feature-log"
 mkdir -p "$PROJECT_DIR/.devloop"
 mkdir -p "$PROJECT_DIR/.devloop/agent-dispatch"
 
@@ -108,9 +110,13 @@ fi
 # ── Reset tick counter (fresh start) ─────────────────────────────────
 echo "0" > "$PROJECT_DIR/.devloop/tick-count"
 
-# ── Clean up orphaned temp files from a previous crashed run ──────────
+# ── Clean up state from a previous run ───────────────────────────────
 rm -f "$PROJECT_DIR/05-progress/STATUS.md.tmp"   2>/dev/null || true
 rm -f "$PROJECT_DIR/05-progress/RETRIES.md.tmp"  2>/dev/null || true
+# COMPLETION.md must be deleted on restart — co-conductor checks for it before doing
+# a Level 3 restart. A stale COMPLETION.md from a prior run would prevent the
+# co-conductor from ever restarting a dead conductor on re-runs of the same project.
+rm -f "$PROJECT_DIR/COMPLETION.md" 2>/dev/null || true
 
 # ── Initialize structured event log ──────────────────────────────────
 EVENT_LOG="$PROJECT_DIR/05-progress/devloop-event.log"

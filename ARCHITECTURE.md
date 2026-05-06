@@ -153,7 +153,10 @@ speccing ──────────────────► spec-verifyin
   │                                                    ▼
   │                                              reviewing
   │                                              (Reviewer — Opus ✱)
-  │                                              FAIL→re-implement
+  │                                              FAIL→review-failed
+  │                                                    │
+  │                                            review-failed
+  │                                            →re-implement (next tick)
   │                                                    │
   │                                                    ▼
   │                                              qa-testing
@@ -163,7 +166,12 @@ speccing ──────────────────► spec-verifyin
   │                                                    ▼
   │                                               done
   │                                                    │
-  │                                            (Conductor dispatches Deployer)
+  │                                          (Conductor dispatches Deployer)
+  │                                                    ▼
+  │                                             deploying
+  │                                             (Deployer — Opus)
+  │                                             FAIL→retry
+  │                                                    │
   │                                                    ▼
   │                                              staged ◄── Deployer PASS
   │                                                    │
@@ -360,12 +368,14 @@ Tier 1–3 resolutions are documented in `DECISIONS.md`. Tier 4 fires a Telegram
 
 ## Pipeline Termination
 
-When all features in STATUS.md reach `done` status, the Conductor:
+When all features in STATUS.md reach `staged` status (deployed to staging), the Conductor:
 
 1. Writes `COMPLETION.md` with timestamp and feature count
 2. Removes all cron jobs for this project
 3. Sends a Telegram notification to TJ
 4. Self-terminates both conductor and co-conductor sessions after 5 seconds
+
+Note: `done` is the intermediate state (QA passed); `staged` is the true terminal state (deployed to staging). The Co-Conductor checks for `COMPLETION.md` before doing a Level 3 restart — if it exists, the pipeline completed intentionally and the conductor should not be restarted.
 
 This is the only way the pipeline stops autonomously. Any other stop (mid-project) must be done manually via `devloop-stop.sh`.
 

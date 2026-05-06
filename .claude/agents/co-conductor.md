@@ -47,7 +47,7 @@ cat "$PROJECT_DIR/FEATURES.md"
 tmux has-session -t "=conductor-${PROJECT_NAME}" 2>/dev/null && echo "ALIVE" || echo "DEAD"
 
 # 5. What is the conductor currently showing?
-tmux capture-pane -t "conductor-${PROJECT_NAME}" -p 2>/dev/null | tail -30 || echo "[cannot capture conductor pane]"
+tmux capture-pane -t "=conductor-${PROJECT_NAME}" -p 2>/dev/null | tail -30 || echo "[cannot capture conductor pane]"
 
 # 6. Any active agent sessions?
 tmux list-sessions -F '#{session_name}' 2>/dev/null | grep "^agent-.*-${PROJECT_NAME}$" || echo "[no agent sessions]"
@@ -98,7 +98,7 @@ No Telegram. No other action.
 CURRENT_STAGE=$(grep -E 'implementing|speccing|reviewing|qa' "$PROJECT_DIR/05-progress/STATUS.md" \
   | head -3 | tr '\n' '; ')
 
-tmux send-keys -t "conductor-${PROJECT_NAME}" \
+tmux send-keys -t "=conductor-${PROJECT_NAME}" \
   "Co-Conductor audit: No progress detected in 15 minutes. Active stages: ${CURRENT_STAGE}. Re-read STATUS.md and resume." \
   Enter
 
@@ -114,7 +114,7 @@ TELEGRAM_TARGET=$(grep TELEGRAM_TARGET "$PROJECT_DIR/.devloop/config" 2>/dev/nul
 ```bash
 # Do NOT embed STATUS.md or FEATURES.md content inline — multi-line variables passed through
 # tmux send-keys treat each newline as Enter, shattering shell state. Pass file paths instead.
-tmux send-keys -t "conductor-${PROJECT_NAME}" \
+tmux send-keys -t "=conductor-${PROJECT_NAME}" \
   "Co-Conductor realignment: STATUS.md appears misaligned with FEATURES.md. Re-read both files ($PROJECT_DIR/05-progress/STATUS.md and $PROJECT_DIR/FEATURES.md) and correct any drift." \
   Enter
 

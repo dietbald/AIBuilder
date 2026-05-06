@@ -78,7 +78,9 @@ For each available slot:
 | `spec-verifying` | output has `verdict: FAIL` | `speccing` | re-dispatch `dev-spec-author` with rejection notes from verifier report |
 | `reviewing` | output has `verdict: PASS` | `qa-testing` | dispatch `dev-qa-tester` |
 | `reviewing` | output has `verdict: FAIL` | `review-failed` | update STATUS.md; **use retry key `${FEATURE}:dev-implementer:review-retry`** on next tick |
-| `qa-testing` | output has `verdict: PASS` | `staged` | dispatch `dev-deployer`; update STATUS.md |
+| `qa-testing` | output has `verdict: PASS` | `deploying` | dispatch `dev-deployer`; update STATUS.md |
+| `deploying` | output has `verdict: PASS` | `staged` | update STATUS.md |
+| `deploying` | output has `verdict: FAIL` | `deploying` | re-dispatch `dev-deployer` with notes; retry logic applies (`${FEATURE}:dev-deployer`) |
 | `qa-testing` | output has `verdict: FAIL` | `implementing` | re-dispatch implementer with QA notes; **use retry key `${FEATURE}:dev-implementer:qa-retry`** |
 | `review-failed` | — | `implementing` | re-dispatch implementer with notes; **use retry key `${FEATURE}:dev-implementer:review-retry`** |
 
@@ -96,13 +98,13 @@ For each available slot:
 # Terminal states: staged (deployed to staging) — the true end state of the pipeline.
 # done is kept as the QA-passed state; staged means deployer also ran successfully.
 TOTAL=$(grep -c '| F-' "$PROJECT_DIR/05-progress/STATUS.md" 2>/dev/null || echo 0)
-DONE=$(grep -cE '\| (staged|done) \|' "$PROJECT_DIR/05-progress/STATUS.md" 2>/dev/null || echo 0)
+DONE=$(grep -cE '\| staged \|' "$PROJECT_DIR/05-progress/STATUS.md" 2>/dev/null || echo 0)
 
 if [ "$TOTAL" -gt 0 ] && [ "$TOTAL" = "$DONE" ]; then
   # All features complete — stop the pipeline
   cat > "$PROJECT_DIR/COMPLETION.md" << EOF
 # DevLoop Completion
-All $TOTAL features reached done status.
+All $TOTAL features reached staged status (deployed to staging).
 Completed: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 Project: $PROJECT_NAME
 EOF
@@ -113,14 +115,14 @@ EOF
   # Telegram notification
   TELEGRAM_TARGET=$(grep TELEGRAM_TARGET "$PROJECT_DIR/.devloop/config" 2>/dev/null | cut -d= -f2)
   [ -n "$TELEGRAM_TARGET" ] && openclaw message send --channel telegram --target "$TELEGRAM_TARGET" \
-    "✅ DevLoop COMPLETE — All $TOTAL features done for $PROJECT_NAME. Check staging." 2>/dev/null || true
+    "✅ DevLoop COMPLETE — All $TOTAL features staged for $PROJECT_NAME. Check staging." 2>/dev/null || true
 
-  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] PIPELINE COMPLETE — all $TOTAL features done, cron removed, self-terminating" \
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] PIPELINE COMPLETE — all $TOTAL features staged, cron removed, self-terminating" \
     >> "$PROJECT_DIR/05-progress/conductor-log.md"
 
-  # Self-terminate — co-conductor will see both sessions dead and send final alert
-  (sleep 5 && tmux kill-session -t "conductor-${PROJECT_NAME}" && tmux kill-session -t "coconductor-${PROJECT_NAME}") &
-  echo "All $TOTAL features complete. Cron stopped. Pipeline shutting down."
+  # Self-terminate — co-conductor checks COMPLETION.md before restarting, so it won't loop
+  (sleep 5 && tmux kill-session -t "=conductor-${PROJECT_NAME}" && tmux kill-session -t "=coconductor-${PROJECT_NAME}") &
+  echo "All $TOTAL features staged. Cron stopped. Pipeline shutting down."
 else
   # Not all done — nothing to do this tick
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] action=idle | $DONE/$TOTAL features done" \
@@ -178,7 +180,7 @@ echo "$(date +%s)" > "$PROJECT_DIR/.devloop/agent-dispatch/${ROLE}-${FEATURE}.ti
 Sub-agents are one-shot (`--print`) — they run, write output, and exit. Their sessions auto-linger so you can inspect the output if needed. Clean them up after reading:
 
 ```bash
-tmux kill-session -t "$AGENT_SESSION" 2>/dev/null || true
+tmux kill-session -t "=$AGENT_SESSION" 2>/dev/null || true
 ```
 
 ## Reading Agent Output
@@ -253,7 +255,7 @@ if [ "$NEW_RL_HITS" -gt "$MAX_RL_BACKOFFS" ]; then
 else
   BACKOFF_SECS=$(( NEW_RL_HITS * 300 ))  # 5 / 10 / 15 min
   # Kill the agent session that hit the limit
-  tmux kill-session -t "$AGENT_SESSION" 2>/dev/null || true
+  tmux kill-session -t "=$AGENT_SESSION" 2>/dev/null || true
   # Do NOT sleep here — the cron will tick you again. Just note the backoff end time in STATUS.md.
   # On the next tick, check if enough time has passed before re-dispatching.
 fi
@@ -273,7 +275,7 @@ Tier 4 conditions:
 1. Persistent rate limit (3+ backoffs)
 2. Auth failure (expired API key, persists after retry)
 3. Git push failure (auth or branch protection)
-4. Retry ceiling exceeded (agent failed 2× with notes, still failing)
+4. Retry ceiling exceeded (agent failed 3 total times — original attempt + 2 retries — with notes, still failing)
 
 ## STATUS.md Atomic Write
 
@@ -334,7 +336,7 @@ for DISPATCH_FILE in "$DISPATCH_DIR"/*.time; do
   fi
 
   if [ "$SHOULD_KILL" -eq 1 ]; then
-    tmux kill-session -t "$AGENT_SESSION" 2>/dev/null || true
+    tmux kill-session -t "=$AGENT_SESSION" 2>/dev/null || true
     rm -f "$DISPATCH_FILE"
 
     echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] ${KILL_REASON} — ${AGENT_KEY}" \
@@ -384,7 +386,7 @@ if [ "$TICK_COUNT" -ge "$TICK_ROTATION_LIMIT" ]; then
 
   # Schedule self-termination after 5s (gives this response time to flush)
   # The co-conductor will see the dead session and restart per Level 3
-  (sleep 5 && tmux kill-session -t "conductor-${PROJECT_NAME}") &
+  (sleep 5 && tmux kill-session -t "=conductor-${PROJECT_NAME}") &
 
   echo "Session rotation at tick ${TICK_ROTATION_LIMIT}. Self-terminating — co-conductor will restart me from STATUS.md. No state is lost."
   # Do NOT take any other action this tick — exit cleanly

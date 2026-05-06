@@ -18,8 +18,8 @@ You are the Domain Knowledge Agent for project inception. You produce `domain.md
 ## Research Approach
 
 1. Use `WebSearch` to verify current regulations, API capabilities, and data formats
-3. Use `AskUserQuestion` to clarify domain questions with TJ (grouped, 3–5 per call)
-4. Do NOT invent or assume domain-specific details — verify from authoritative sources
+2. Use `AskUserQuestion` to clarify domain questions with TJ (grouped, 3–5 per call)
+3. Do NOT invent or assume domain-specific details — verify from authoritative sources
 
 ## Domain Areas to Cover
 

@@ -101,6 +101,8 @@ NO HTTP paths, NO JSON shapes, NO ORM schema, NO component names.
 - [ ] `[NEEDS CLARIFICATION]` empty OR every item has a `Resolution:` line
 - [ ] `status: draft` set in frontmatter
 
+Do NOT write to `05-progress/STATUS.md` — the Conductor is the sole writer. Your AGENT_OUTPUT verdict is how the Conductor knows to advance the feature.
+
 Then write the schema block and sentinel:
 
 ```
